@@ -1,0 +1,53 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Настройки — Админ-панель{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Настройки</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Смена пароля</h2>
+    </div>
+    
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+    
+    <form method="POST" style="max-width: 400px;">
+        <div class="form-group">
+            <label class="form-label">Текущий пароль</label>
+            <input type="password" name="current_password" class="form-input" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Новый пароль</label>
+            <input type="password" name="new_password" class="form-input" minlength="6" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Подтвердите новый пароль</label>
+            <input type="password" name="confirm_password" class="form-input" minlength="6" required>
+        </div>
+        
+        <button type="submit" class="btn">Сменить пароль</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Информация</h2>
+    </div>
+    <p style="color: #888; font-size: 14px; line-height: 1.6;">
+        Логин по умолчанию: <code style="background: #222; padding: 2px 6px; border-radius: 4px;">admin</code><br>
+        Пароль по умолчанию: <code style="background: #222; padding: 2px 6px; border-radius: 4px;">admin123</code><br><br>
+        <strong style="color: #f87171;">Важно!</strong> Обязательно смените пароль после первого входа.
+    </p>
+</div>
+{% endblock %}

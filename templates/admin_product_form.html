@@ -1,0 +1,397 @@
+{% extends "admin_base.html" %}
+
+{% block title %}{{ 'Редактировать' if product else 'Добавить' }} товар — 2SOUL Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ 'Редактировать товар' if product else 'Новый товар' }}</h1>
+</div>
+
+<div class="card">
+    <form method="POST" enctype="multipart/form-data" id="productForm">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Название товара *</label>
+                <input type="text" name="name" class="form-input" 
+                       value="{{ product.name if product else '' }}" 
+                       placeholder="Например: Худи Oversize Black" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Категория *</label>
+                <select name="category_id" class="form-input" required>
+                    <option value="">Выберите категорию</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" 
+                            {% if product and product.category_id == cat.id %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Цена (₽) *</label>
+                <input type="number" name="price" class="form-input" 
+                       value="{{ product.price if product else '' }}" 
+                       placeholder="4990" min="0" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Метка</label>
+                <select name="tag" class="form-input">
+                    <option value="">Без метки</option>
+                    <option value="NEW" {% if product and product.tag == 'NEW' %}selected{% endif %}>NEW</option>
+                    <option value="HIT" {% if product and product.tag == 'HIT' %}selected{% endif %}>HIT</option>
+                    <option value="SALE" {% if product and product.tag == 'SALE' %}selected{% endif %}>SALE</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Описание товара</label>
+            <textarea name="description" class="form-input" rows="4" 
+                      placeholder="Описание материала, особенностей, ухода за изделием...">{{ product.description if product else '' }}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Размеры *</label>
+            <div class="checkbox-group" id="sizesGroup">
+                {% set current_sizes = product.sizes|default('[]') if product else '["S","M","L","XL"]' %}
+                {% for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'] %}
+                <label class="checkbox-item">
+                    <input type="checkbox" name="sizes" value="{{ size }}" 
+                           {% if size in current_sizes %}checked{% endif %}>
+                    <span class="checkbox-label">{{ size }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            
+            <!-- Кастомные размеры -->
+            <div id="customSizesContainer" style="margin-top: 12px;"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                <input type="text" id="customSizeInput" class="form-input" 
+                       placeholder="Свой размер (напр. 42, 44-46, 170/92)" 
+                       style="width: 250px;">
+                <button type="button" class="btn btn-outline" onclick="addCustomSize()">
+                    + Добавить
+                </button>
+            </div>
+            <p style="font-size: 11px; color: #666; margin-top: 8px;">
+                Можно добавлять цифровые размеры: 40, 42, 44 и т.д.
+            </p>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Фотографии товара (можно загрузить несколько)</label>
+            <label class="file-upload" id="fileUpload">
+                <input type="file" name="images" accept="image/*" id="imageInput" multiple>
+                <div class="file-upload-text">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 10px; display: block; opacity: 0.5;">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Нажмите или перетащите файлы
+                </div>
+                <div class="file-upload-hint">PNG, JPG, WEBP до 32MB. Первое фото — главное</div>
+            </label>
+            
+            <!-- Preview new images -->
+            <div id="imagePreview" class="image-preview-grid" style="display: none; margin-top: 16px;"></div>
+            
+            <!-- Current images (edit mode) -->
+            {% if product and product.images %}
+            <div class="current-images" style="margin-top: 16px;">
+                <p style="font-size: 13px; color: #888; margin-bottom: 12px;">Текущие фото (отметьте для удаления):</p>
+                <div class="image-preview-grid">
+                    {% set images = product.images | default('[]') %}
+                    {% for img in images | tojson | default([]) %}
+                    <!-- Images will be rendered by JS -->
+                    {% endfor %}
+                </div>
+                <div id="currentImages" data-images='{{ product.images }}'></div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if product %}
+        <div class="form-group">
+            <label class="checkbox-item" style="display: inline-flex;">
+                <input type="checkbox" name="active" {% if product.active %}checked{% endif %}>
+                <span class="checkbox-label">Товар активен (показывать в магазине)</span>
+            </label>
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; gap: 12px; margin-top: 30px;">
+            <button type="submit" class="btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                {{ 'Сохранить' if product else 'Добавить товар' }}
+            </button>
+            <a href="{{ url_for('admin_products') }}" class="btn btn-outline">Отмена</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    textarea.form-input {
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    .image-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+    }
+    
+    .image-preview-item {
+        position: relative;
+        aspect-ratio: 3/4;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #1a1a1a;
+    }
+    
+    .image-preview-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .image-preview-item .remove-btn {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 24px;
+        height: 24px;
+        background: rgba(0,0,0,0.7);
+        border: none;
+        border-radius: 50%;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+    
+    .image-preview-item .main-badge {
+        position: absolute;
+        bottom: 6px;
+        left: 6px;
+        background: #fff;
+        color: #000;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 3px 6px;
+        border-radius: 4px;
+    }
+    
+    .image-preview-item label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+    
+    .image-preview-item:hover label {
+        opacity: 1;
+    }
+    
+    .image-preview-item input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+    
+    .image-preview-item input[type="checkbox"]:checked + .overlay {
+        opacity: 1;
+        background: rgba(255, 0, 0, 0.5);
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Custom sizes
+    let customSizes = [];
+    
+    // Load existing custom sizes (edit mode)
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if product and product.sizes %}
+        try {
+            const allSizes = JSON.parse('{{ product.sizes | safe }}');
+            const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'];
+            allSizes.forEach(size => {
+                if (!standardSizes.includes(size)) {
+                    customSizes.push(size);
+                }
+            });
+            renderCustomSizes();
+        } catch(e) {}
+        {% endif %}
+    });
+    
+    function addCustomSize() {
+        const input = document.getElementById('customSizeInput');
+        const size = input.value.trim();
+        
+        if (size && !customSizes.includes(size)) {
+            customSizes.push(size);
+            renderCustomSizes();
+            input.value = '';
+        }
+    }
+    
+    // Enter key support
+    document.getElementById('customSizeInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addCustomSize();
+        }
+    });
+    
+    function removeCustomSize(index) {
+        customSizes.splice(index, 1);
+        renderCustomSizes();
+    }
+    
+    function renderCustomSizes() {
+        const container = document.getElementById('customSizesContainer');
+        
+        if (customSizes.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Добавленные размеры:</div>
+            <div class="checkbox-group">
+                ${customSizes.map((size, i) => `
+                    <label class="checkbox-item" style="position: relative;">
+                        <input type="checkbox" name="sizes" value="${size}" checked>
+                        <span class="checkbox-label">${size}</span>
+                        <button type="button" onclick="removeCustomSize(${i})" 
+                                style="position: absolute; right: -8px; top: -8px; width: 20px; height: 20px; 
+                                       background: #ff4444; border: none; border-radius: 50%; color: #fff; 
+                                       font-size: 12px; cursor: pointer; display: flex; align-items: center; 
+                                       justify-content: center;">×</button>
+                    </label>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    // Preview new images
+    const imageInput = document.getElementById('imageInput');
+    const previewContainer = document.getElementById('imagePreview');
+    let selectedFiles = [];
+    
+    imageInput.addEventListener('change', function(e) {
+        selectedFiles = Array.from(e.target.files);
+        updatePreview();
+    });
+    
+    function updatePreview() {
+        if (selectedFiles.length === 0) {
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        previewContainer.style.display = 'grid';
+        previewContainer.innerHTML = '<p style="grid-column: 1/-1; font-size: 13px; color: #888; margin-bottom: 4px;">Новые фото:</p>';
+        
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'image-preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="">
+                    ${index === 0 ? '<span class="main-badge">ГЛАВНОЕ</span>' : ''}
+                    <button type="button" class="remove-btn" onclick="removeNewImage(${index})">×</button>
+                `;
+                previewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    function removeNewImage(index) {
+        selectedFiles.splice(index, 1);
+        
+        // Update file input
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        imageInput.files = dt.files;
+        
+        updatePreview();
+    }
+    
+    // Render current images (edit mode)
+    const currentImagesEl = document.getElementById('currentImages');
+    if (currentImagesEl) {
+        try {
+            const images = JSON.parse(currentImagesEl.dataset.images || '[]');
+            if (images.length > 0) {
+                const container = currentImagesEl.parentElement.querySelector('.image-preview-grid');
+                container.innerHTML = images.map((img, i) => `
+                    <div class="image-preview-item">
+                        <img src="${img}" alt="">
+                        ${i === 0 ? '<span class="main-badge">ГЛАВНОЕ</span>' : ''}
+                        <label>
+                            <input type="checkbox" name="remove_images" value="${img}">
+                            <span style="color: #fff; font-size: 11px; margin-left: 6px;">Удалить</span>
+                        </label>
+                    </div>
+                `).join('');
+            }
+        } catch(e) {
+            console.error('Error parsing images:', e);
+        }
+    }
+    
+    // Drag and drop
+    const fileUpload = document.getElementById('fileUpload');
+    
+    fileUpload.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUpload.style.borderColor = '#666';
+        fileUpload.style.background = '#1a1a1a';
+    });
+    
+    fileUpload.addEventListener('dragleave', () => {
+        fileUpload.style.borderColor = '#333';
+        fileUpload.style.background = 'transparent';
+    });
+    
+    fileUpload.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUpload.style.borderColor = '#333';
+        fileUpload.style.background = 'transparent';
+        
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length > 0) {
+            selectedFiles = [...selectedFiles, ...files];
+            
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            imageInput.files = dt.files;
+            
+            updatePreview();
+        }
+    });
+</script>
+{% endblock %}

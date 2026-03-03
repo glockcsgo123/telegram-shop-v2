@@ -1,0 +1,158 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Заказы — 2SOUL Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Заказы</h1>
+</div>
+
+<div class="card">
+    {% if orders %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Клиент</th>
+                    <th>Контакты</th>
+                    <th>Доставка СДЭК</th>
+                    <th>Товары</th>
+                    <th>Оплата</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                    <th>Дата</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>{{ order.id }}</td>
+                    <td>
+                        <div style="font-weight: 500;">{{ order.customer_name or '—' }}</div>
+                        <div style="font-size: 12px; color: #888;">{{ order.customer_phone or '' }}</div>
+                    </td>
+                    <td>
+                        {% if order.customer_telegram %}
+                        <div style="font-size: 12px;">
+                            <a href="https://t.me/{{ order.customer_telegram | replace('@', '') }}" 
+                               target="_blank" 
+                               style="color: #60a5fa; text-decoration: none;">
+                                {{ order.customer_telegram }}
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% if order.customer_vk %}
+                        <div style="font-size: 12px; color: #888;">
+                            VK: {{ order.customer_vk }}
+                        </div>
+                        {% endif %}
+                        {% if not order.customer_telegram and not order.customer_vk %}
+                        <span style="color: #666;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-size: 12px;">{{ order.customer_city or '—' }}</div>
+                        <div class="cdek-info" data-cdek='{{ order.cdek_point | default("null", true) }}'></div>
+                    </td>
+                    <td>
+                        <div class="order-items" data-items='{{ order.items }}'></div>
+                    </td>
+                    <td>
+                        {% if order.payment_method == 'sbp' %}
+                        <span style="color: #4ade80; font-size: 12px;">💳 СБП</span>
+                        {% elif order.payment_method == 'card' %}
+                        <span style="color: #60a5fa; font-size: 12px;">💳 Карта</span>
+                        {% else %}
+                        <span style="color: #888; font-size: 12px;">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-weight: 600; white-space: nowrap;">{{ "{:,.0f}".format(order.total or 0).replace(",", " ") }} ₽</td>
+                    <td>
+                        <span class="status status-{{ order.status }}">
+                            {% if order.status == 'new' %}Новый
+                            {% elif order.status == 'processing' %}В работе
+                            {% elif order.status == 'shipped' %}Отправлен
+                            {% elif order.status == 'completed' %}Выполнен
+                            {% elif order.status == 'cancelled' %}Отменён
+                            {% else %}{{ order.status }}{% endif %}
+                        </span>
+                    </td>
+                    <td style="font-size: 12px; color: #888; white-space: nowrap;">{{ order.created_at[:16] if order.created_at else '—' }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('admin_update_order_status', order_id=order.id) }}" style="display: flex; gap: 6px;">
+                            <select name="status" class="form-input" style="padding: 6px 8px; font-size: 11px; width: 95px;">
+                                <option value="new" {% if order.status == 'new' %}selected{% endif %}>Новый</option>
+                                <option value="processing" {% if order.status == 'processing' %}selected{% endif %}>В работе</option>
+                                <option value="shipped" {% if order.status == 'shipped' %}selected{% endif %}>Отправлен</option>
+                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Выполнен</option>
+                                <option value="cancelled" {% if order.status == 'cancelled' %}selected{% endif %}>Отменён</option>
+                            </select>
+                            <button type="submit" class="action-btn">OK</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📦</div>
+        <p>Заказов пока нет</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .status-shipped { background: #1e3a5f; color: #60a5fa; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Parse order items
+    document.querySelectorAll('.order-items').forEach(el => {
+        try {
+            const items = JSON.parse(el.dataset.items || '[]');
+            if (items.length > 0) {
+                el.innerHTML = items.map(item => 
+                    `<div style="font-size: 12px; margin-bottom: 2px;">${item.name} <span style="color:#888;">(${item.size})</span> × ${item.qty}</div>`
+                ).join('');
+            } else {
+                el.innerHTML = '<span style="color: #666;">—</span>';
+            }
+        } catch(e) {
+            el.innerHTML = '<span style="color: #666;">—</span>';
+        }
+    });
+    
+    // Parse CDEK info
+    document.querySelectorAll('.cdek-info').forEach(el => {
+        try {
+            const cdekStr = el.dataset.cdek;
+            
+            if (cdekStr && cdekStr !== 'None' && cdekStr !== 'null' && cdekStr !== '') {
+                const cdek = JSON.parse(cdekStr);
+                
+                if (cdek && typeof cdek === 'object') {
+                    let text = '';
+                    
+                    if (cdek.address) {
+                        text = cdek.address;
+                    } else if (cdek.name) {
+                        text = cdek.name;
+                    }
+                    
+                    if (text) {
+                        el.innerHTML = `<div style="font-size: 11px; color: #4ade80; margin-top: 4px;">📍 ПВЗ: ${text}</div>`;
+                    }
+                }
+            }
+        } catch(e) {
+            console.log('CDEK parse error:', e);
+        }
+    });
+</script>
+{% endblock %}

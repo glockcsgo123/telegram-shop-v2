@@ -1,0 +1,62 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Категории — Админ-панель{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Категории</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Добавить категорию</h2>
+    </div>
+    <form method="POST" style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <input type="text" name="name" class="form-input" placeholder="Название (Футболки)" style="width: 200px;" required>
+        <input type="text" name="slug" class="form-input" placeholder="Slug (tshirts)" style="width: 200px;" required>
+        <button type="submit" class="btn">Добавить</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Все категории</h2>
+    </div>
+    
+    {% if categories %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Slug</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categories %}
+                <tr>
+                    <td>{{ cat.id }}</td>
+                    <td>{{ cat.name }}</td>
+                    <td><code style="background: #222; padding: 4px 8px; border-radius: 4px;">{{ cat.slug }}</code></td>
+                    <td>
+                        <a href="{{ url_for('admin_delete_category', category_id=cat.id) }}" 
+                           class="action-btn delete" 
+                           onclick="return confirm('Удалить категорию? Товары в этой категории останутся без категории.')">
+                            Удалить
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📂</div>
+        <p>Категорий пока нет</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
