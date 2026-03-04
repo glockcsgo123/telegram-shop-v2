@@ -23,6 +23,10 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB
 
+# Путь к базе данных — /data для Amvera (persistentMount)
+DATA_DIR = '/data' if os.path.exists('/data') else '.'
+DB_PATH = os.path.join(DATA_DIR, 'shop.db')
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs('static', exist_ok=True)
 os.makedirs('templates', exist_ok=True)
@@ -31,7 +35,7 @@ os.makedirs('templates', exist_ok=True)
 # ==================== DATABASE ====================
 
 def get_db():
-    conn = sqlite3.connect('shop.db')
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -268,10 +272,16 @@ def api_create_order():
 
 # ==================== ADMIN ====================
 
+@app.route('/admin')
+def admin_index():
+    if 'admin_id' in session:
+        return redirect(url_for('admin_products'))
+    return redirect(url_for('admin_login'))
+
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     error = None
-    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -284,8 +294,7 @@ def admin_login():
         
         if admin and check_password_hash(admin['password'], password):
             session['admin_id'] = admin['id']
-            session['admin_username'] = admin['username']
-            return redirect(url_for('admin_dashboard'))
+            return redirect(url_for('admin_products'))
         else:
             error = 'Неверный логин или пароль'
     
@@ -294,35 +303,8 @@ def admin_login():
 
 @app.route('/admin/logout')
 def admin_logout():
-    session.clear()
+    session.pop('admin_id', None)
     return redirect(url_for('admin_login'))
-
-
-@app.route('/admin')
-@login_required
-def admin_dashboard():
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT COUNT(*) FROM products WHERE active = 1')
-    products_count = cursor.fetchone()[0]
-    
-    cursor.execute('SELECT COUNT(*) FROM orders')
-    orders_count = cursor.fetchone()[0]
-    
-    cursor.execute('SELECT COUNT(*) FROM orders WHERE status = "new"')
-    new_orders_count = cursor.fetchone()[0]
-    
-    cursor.execute('SELECT SUM(total) FROM orders')
-    total_revenue = cursor.fetchone()[0] or 0
-    
-    conn.close()
-    
-    return render_template('admin_dashboard.html', 
-                         products_count=products_count,
-                         orders_count=orders_count,
-                         new_orders_count=new_orders_count,
-                         total_revenue=total_revenue)
 
 
 @app.route('/admin/products')
@@ -585,6 +567,10 @@ def index():
 def static_files(filename):
     return send_from_directory('static', filename)
 
+
+# Инициализация БД при запуске
+init_db()
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
+    port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False)
