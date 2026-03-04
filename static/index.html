@@ -571,10 +571,10 @@
             transform: translateY(100%);
             transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
             max-height: 90vh;
-            height: 90vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            touch-action: none;
         }
 
         .cart-modal.open {
@@ -621,16 +621,11 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
-            max-height: calc(90vh - 180px);
+            touch-action: pan-y;
         }
 
         .cart-items {
             padding: 16px;
-        }
-
-        /* Фикс скролла для формы заказа */
-        .cart-content:has(.order-form.active) {
-            overflow-y: auto;
         }
 
         .cart-empty {
@@ -770,6 +765,11 @@
             display: none;
             padding: 16px;
             padding-bottom: 40px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            max-height: calc(90vh - 60px);
+            touch-action: pan-y;
         }
 
         .order-form.active {
@@ -1651,10 +1651,16 @@
         // Order Form
         function showOrderForm() {
             document.getElementById('cartItemsView').style.display = 'none';
-            document.getElementById('orderForm').classList.add('active');
+            const orderForm = document.getElementById('orderForm');
+            orderForm.classList.add('active');
             
             // Скроллим наверх при открытии формы
-            document.querySelector('.cart-content').scrollTop = 0;
+            orderForm.scrollTop = 0;
+            
+            // Разрешаем скролл внутри формы
+            orderForm.addEventListener('touchmove', function(e) {
+                e.stopPropagation();
+            }, { passive: true });
             
             if (tg?.initDataUnsafe?.user) {
                 const user = tg.initDataUnsafe.user;
