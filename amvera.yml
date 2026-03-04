@@ -4,7 +4,7 @@ meta:
     name: pip
     version: "3.11"
 build:
-  requirements: requirements.txt
+  requirementsPath: requirements.txt
 run:
   command: gunicorn app:app --bind 0.0.0.0:8000
   port: 8000
