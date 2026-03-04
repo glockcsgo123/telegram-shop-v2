@@ -91,31 +91,36 @@ def init_db():
     ''')
     
     # Добавляем новые колонки если их нет (для миграции)
+    # Добавляем новые колонки если их нет (для миграции)
     try:
         cursor.execute('ALTER TABLE products ADD COLUMN description TEXT')
     except:
         pass
+    
     try:
         cursor.execute('ALTER TABLE products ADD COLUMN images TEXT DEFAULT "[]"')
     except:
         pass
+    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN customer_telegram TEXT')
     except:
         pass
+    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN customer_vk TEXT')
     except:
         pass
+    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN cdek_point TEXT')
     except:
         pass
+    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT "sbp"')
     except:
         pass
-    
     # Админ по умолчанию
     try:
         cursor.execute(
@@ -580,9 +585,6 @@ def index():
 def static_files(filename):
     return send_from_directory('static', filename)
 
-
-# ==================== MAIN ====================
-
 if __name__ == '__main__':
-    init_db()
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)
