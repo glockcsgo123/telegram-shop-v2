@@ -2,6 +2,7 @@
 2SOUL Shop - Backend
 Flask + SQLite + Admin Panel
 Поддержка нескольких фото, описания товаров, СДЭК
+Фото сохраняются в /data/uploads/ для persistentMount
 """
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, send_from_directory
@@ -18,15 +19,16 @@ app = Flask(__name__)
 app.secret_key = 'change-this-secret-key-2soul-shop'  # ПОМЕНЯЙ!
 CORS(app)
 
-UPLOAD_FOLDER = 'static/uploads'
+# Путь к данным — /data для Amvera (persistentMount)
+DATA_DIR = '/data' if os.path.exists('/data') else '.'
+DB_PATH = os.path.join(DATA_DIR, 'shop.db')
+UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
+
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB
 
-# Путь к базе данных — /data для Amvera (persistentMount)
-DATA_DIR = '/data' if os.path.exists('/data') else '.'
-DB_PATH = os.path.join(DATA_DIR, 'shop.db')
-
+# Создаём папки
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs('static', exist_ok=True)
 os.makedirs('templates', exist_ok=True)
@@ -94,8 +96,7 @@ def init_db():
         )
     ''')
     
-    # Добавляем новые колонки если их нет (для миграции)
-    # Добавляем новые колонки если их нет (для миграции)
+    # Миграции
     try:
         cursor.execute('ALTER TABLE products ADD COLUMN description TEXT')
     except:
@@ -125,6 +126,7 @@ def init_db():
         cursor.execute('ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT "sbp"')
     except:
         pass
+    
     # Админ по умолчанию
     try:
         cursor.execute(
@@ -174,8 +176,16 @@ def save_uploaded_file(file):
         ext = file.filename.rsplit('.', 1)[1].lower()
         filename = f"{uuid.uuid4().hex}.{ext}"
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return f"/static/uploads/{filename}"
+        return f"/uploads/{filename}"
     return None
+
+
+# ==================== UPLOADS ROUTE ====================
+
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    """Отдаём файлы из /data/uploads/"""
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 # ==================== API ====================
@@ -195,7 +205,6 @@ def api_products():
     
     products = []
     for row in cursor.fetchall():
-        # Парсим images
         images = []
         try:
             images = json.loads(row['images']) if row['images'] else []
@@ -203,7 +212,6 @@ def api_products():
             if row['images']:
                 images = [row['images']]
         
-        # Для обратной совместимости
         main_image = images[0] if images else None
         
         products.append({
@@ -268,6 +276,62 @@ def api_create_order():
     conn.close()
     
     return jsonify({'success': True, 'order_id': order_id})
+
+
+# ==================== ADMIN API для порядка фото ====================
+
+@app.route('/admin/api/products/<int:product_id>/reorder-images', methods=['POST'])
+@login_required
+def admin_reorder_images(product_id):
+    """API для изменения порядка фотографий"""
+    data = request.json
+    new_order = data.get('images', [])
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('UPDATE products SET images = ? WHERE id = ?', 
+                   (json.dumps(new_order), product_id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+
+
+@app.route('/admin/api/products/<int:product_id>/delete-image', methods=['POST'])
+@login_required
+def admin_delete_image(product_id):
+    """API для удаления одного фото"""
+    data = request.json
+    image_to_delete = data.get('image')
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT images FROM products WHERE id = ?', (product_id,))
+    product = cursor.fetchone()
+    
+    if product:
+        try:
+            images = json.loads(product['images']) if product['images'] else []
+            if image_to_delete in images:
+                images.remove(image_to_delete)
+                
+                # Удаляем файл
+                try:
+                    filename = image_to_delete.replace('/uploads/', '')
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                except:
+                    pass
+                
+                cursor.execute('UPDATE products SET images = ? WHERE id = ?',
+                             (json.dumps(images), product_id))
+                conn.commit()
+        except:
+            pass
+    
+    conn.close()
+    return jsonify({'success': True})
 
 
 # ==================== ADMIN ====================
@@ -392,23 +456,15 @@ def admin_edit_product(product_id):
         tag = request.form.get('tag') or None
         active = 1 if request.form.get('active') else 0
         
-        # Текущие изображения
+        # Получаем порядок изображений из формы
+        images_order = request.form.get('images_order', '[]')
         try:
-            current_images = json.loads(product['images']) if product['images'] else []
+            current_images = json.loads(images_order)
         except:
-            current_images = []
-        
-        # Удаляемые изображения
-        remove_images = request.form.getlist('remove_images')
-        for img_path in remove_images:
-            if img_path in current_images:
-                current_images.remove(img_path)
-                # Удаляем файл
-                try:
-                    file_path = img_path.replace('/static/uploads/', '')
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], file_path))
-                except:
-                    pass
+            try:
+                current_images = json.loads(product['images']) if product['images'] else []
+            except:
+                current_images = []
         
         # Новые изображения
         files = request.files.getlist('images')
@@ -446,8 +502,8 @@ def admin_delete_product(product_id):
             images = json.loads(product['images'])
             for img_path in images:
                 try:
-                    file_path = img_path.replace('/static/uploads/', '')
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], file_path))
+                    filename = img_path.replace('/uploads/', '')
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 except:
                     pass
         except:
