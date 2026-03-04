@@ -57,37 +57,43 @@
                       placeholder="Подробное описание товара...">{{ product.description if product else '' }}</textarea>
         </div>
         
+        <!-- Размеры -->
         <div class="form-group">
             <label class="form-label">Размеры</label>
-            <div class="checkbox-group">
-                {% set current_sizes = [] %}
-                {% if product and product.sizes %}
-                    {% set current_sizes = product.sizes | tojson | safe | replace('"', '') | replace('[', '') | replace(']', '') | replace(' ', '') %}
-                {% endif %}
+            <div class="sizes-section">
+                <div class="sizes-standard">
+                    <span class="sizes-label">Стандартные:</span>
+                    <div class="checkbox-group">
+                        {% for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] %}
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="sizes" value="{{ size }}" class="size-checkbox"
+                                   {% if not product %}{% if size in ['S', 'M', 'L', 'XL'] %}checked{% endif %}{% endif %}
+                                   {% if product and product.sizes and size in product.sizes %}checked{% endif %}>
+                            <span class="checkbox-label">{{ size }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
                 
-                {% for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL'] %}
-                <label class="checkbox-item">
-                    <input type="checkbox" name="sizes" value="{{ size }}"
-                           {% if not product or size in (product.sizes | default('["S","M","L","XL"]', true) | string) %}checked{% endif %}>
-                    <span class="checkbox-label">{{ size }}</span>
-                </label>
-                {% endfor %}
+                <div class="sizes-custom">
+                    <span class="sizes-label">Свои размеры:</span>
+                    <div class="custom-sizes-input">
+                        <input type="text" id="customSizeInput" class="form-input" 
+                               placeholder="Например: 42, 44-46, ONE SIZE" style="flex: 1;">
+                        <button type="button" class="btn btn-outline" onclick="addCustomSize()">+ Добавить</button>
+                    </div>
+                    <div class="custom-sizes-list" id="customSizesList">
+                        <!-- Кастомные размеры будут здесь -->
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Текущие фотографии с drag-and-drop -->
+        <!-- Текущие фотографии -->
         {% if product %}
         <div class="form-group">
-            <label class="form-label">Текущие фотографии <span style="color: #888; font-weight: normal;">(перетаскивайте для изменения порядка, первое фото — главное)</span></label>
-            <div class="images-grid" id="imagesGrid">
-                {% set images = product.images | default('[]', true) %}
-                {% if images is string %}
-                    {% set images = images | tojson | safe %}
-                {% endif %}
-                {% for img in images | default([], true) if images is iterable and images is not string %}
-                <!-- Будет заполнено через JavaScript -->
-                {% endfor %}
-            </div>
+            <label class="form-label">Текущие фотографии <span style="color: #888; font-weight: normal;">(перетаскивайте для изменения порядка, первое = главное)</span></label>
+            <div class="images-grid" id="imagesGrid"></div>
             <input type="hidden" name="images_order" id="imagesOrder" value="{{ product.images if product else '[]' }}">
         </div>
         {% endif %}
@@ -120,21 +126,81 @@
 </div>
 
 <style>
+/* Секция размеров */
+.sizes-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sizes-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.sizes-standard .checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.custom-sizes-input {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.custom-sizes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.custom-size-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.custom-size-tag .remove-size {
+    background: none;
+    border: none;
+    color: #f87171;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    line-height: 1;
+}
+
+.custom-size-tag .remove-size:hover {
+    color: #ff6b6b;
+}
+
+/* Сетка изображений - ФИКСИРОВАННЫЙ РАЗМЕР */
 .images-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, 120px);
+    gap: 12px;
     margin-top: 12px;
 }
 
 .image-item {
     position: relative;
-    aspect-ratio: 1;
-    border-radius: 12px;
+    width: 120px;
+    height: 120px;
+    border-radius: 10px;
     overflow: hidden;
     cursor: grab;
     border: 2px solid #333;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .image-item:active {
@@ -148,7 +214,7 @@
 
 .image-item.drag-over {
     border-color: #fff;
-    transform: scale(1.02);
+    transform: scale(1.05);
 }
 
 .image-item.main {
@@ -159,31 +225,32 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
 }
 
 .image-item .badge {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 6px;
+    left: 6px;
     background: #4ade80;
     color: #000;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
     font-weight: 600;
 }
 
 .image-item .delete-btn {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    background: rgba(0,0,0,0.7);
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.8);
     border: none;
     border-radius: 50%;
     color: #f87171;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -203,29 +270,31 @@
 
 .image-item .order-num {
     position: absolute;
-    bottom: 8px;
-    left: 8px;
-    background: rgba(0,0,0,0.7);
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.8);
     color: #fff;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
 }
 
+/* Превью новых файлов */
 .preview-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, 80px);
+    gap: 10px;
     margin-top: 12px;
 }
 
 .preview-item {
-    aspect-ratio: 1;
+    width: 80px;
+    height: 80px;
     border-radius: 8px;
     overflow: hidden;
     border: 2px solid #333;
@@ -235,6 +304,24 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    display: block;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .images-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .image-item {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1;
+    }
+    
+    .custom-sizes-input {
+        flex-direction: column;
+    }
 }
 </style>
 
@@ -246,15 +333,78 @@ document.addEventListener('DOMContentLoaded', function() {
     const previewGrid = document.getElementById('previewGrid');
     const productId = {{ product.id if product else 'null' }};
     
-    // Парсим текущие изображения
+    // Стандартные размеры (не кастомные)
+    const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    
+    // Парсим текущие размеры для выявления кастомных
+    let allSizes = [];
+    try {
+        const sizesRaw = '{{ product.sizes | default("[]", true) | safe }}';
+        allSizes = JSON.parse(sizesRaw.replace(/'/g, '"'));
+    } catch(e) {
+        allSizes = ['S', 'M', 'L', 'XL'];
+    }
+    
+    // Отделяем кастомные размеры
+    const customSizes = allSizes.filter(s => !standardSizes.includes(s));
+    
+    // Рендерим кастомные размеры
+    function renderCustomSizes() {
+        const list = document.getElementById('customSizesList');
+        list.innerHTML = '';
+        customSizes.forEach(size => {
+            const tag = document.createElement('div');
+            tag.className = 'custom-size-tag';
+            tag.innerHTML = `
+                <input type="checkbox" name="sizes" value="${size}" checked style="display:none;">
+                <span>${size}</span>
+                <button type="button" class="remove-size" onclick="removeCustomSize('${size}')">✕</button>
+            `;
+            list.appendChild(tag);
+        });
+    }
+    
+    // Добавить кастомный размер
+    window.addCustomSize = function() {
+        const input = document.getElementById('customSizeInput');
+        const value = input.value.trim().toUpperCase();
+        if (value && !customSizes.includes(value) && !standardSizes.includes(value)) {
+            customSizes.push(value);
+            renderCustomSizes();
+            input.value = '';
+        }
+    };
+    
+    // Удалить кастомный размер
+    window.removeCustomSize = function(size) {
+        const index = customSizes.indexOf(size);
+        if (index > -1) {
+            customSizes.splice(index, 1);
+            renderCustomSizes();
+        }
+    };
+    
+    // Enter для добавления размера
+    document.getElementById('customSizeInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addCustomSize();
+        }
+    });
+    
+    // Инициализация кастомных размеров
+    renderCustomSizes();
+    
+    // ===== ИЗОБРАЖЕНИЯ =====
+    
     let currentImages = [];
     try {
-        currentImages = JSON.parse('{{ product.images | default("[]", true) | safe }}'.replace(/'/g, '"'));
+        const imagesRaw = '{{ product.images | default("[]", true) | safe }}';
+        currentImages = JSON.parse(imagesRaw.replace(/'/g, '"'));
     } catch(e) {
         currentImages = [];
     }
     
-    // Рендерим изображения
     function renderImages() {
         if (!imagesGrid) return;
         
@@ -273,7 +423,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="delete-btn" onclick="deleteImage('${img}')">✕</button>
             `;
             
-            // Drag events
             item.addEventListener('dragstart', handleDragStart);
             item.addEventListener('dragend', handleDragEnd);
             item.addEventListener('dragover', handleDragOver);
@@ -283,7 +432,6 @@ document.addEventListener('DOMContentLoaded', function() {
             imagesGrid.appendChild(item);
         });
         
-        // Обновляем hidden input
         if (imagesOrderInput) {
             imagesOrderInput.value = JSON.stringify(currentImages);
         }
@@ -325,14 +473,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const fromIndex = parseInt(draggedItem.dataset.index);
         const toIndex = parseInt(this.dataset.index);
         
-        // Меняем местами
         const temp = currentImages[fromIndex];
         currentImages.splice(fromIndex, 1);
         currentImages.splice(toIndex, 0, temp);
         
         renderImages();
         
-        // Сохраняем на сервер если редактируем
         if (productId) {
             fetch(`/admin/api/products/${productId}/reorder-images`, {
                 method: 'POST',
@@ -342,14 +488,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Удаление изображения
     window.deleteImage = function(imagePath) {
         if (!confirm('Удалить это фото?')) return;
         
         currentImages = currentImages.filter(img => img !== imagePath);
         renderImages();
         
-        // Удаляем на сервере если редактируем
         if (productId) {
             fetch(`/admin/api/products/${productId}/delete-image`, {
                 method: 'POST',
@@ -408,7 +552,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Инициализация
     renderImages();
 });
 </script>
