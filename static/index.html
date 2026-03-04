@@ -571,8 +571,10 @@
             transform: translateY(100%);
             transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
             max-height: 90vh;
+            height: 90vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .cart-modal.open {
@@ -618,10 +620,17 @@
             flex: 1;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            max-height: calc(90vh - 180px);
         }
 
         .cart-items {
             padding: 16px;
+        }
+
+        /* Фикс скролла для формы заказа */
+        .cart-content:has(.order-form.active) {
+            overflow-y: auto;
         }
 
         .cart-empty {
@@ -760,6 +769,7 @@
         .order-form {
             display: none;
             padding: 16px;
+            padding-bottom: 40px;
         }
 
         .order-form.active {
@@ -1566,6 +1576,7 @@
         function openCart() {
             document.getElementById('cartOverlay').classList.add('open');
             document.getElementById('cartModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
             renderCartItems();
             if (tg) tg.HapticFeedback?.impactOccurred('medium');
         }
@@ -1573,6 +1584,7 @@
         function closeCart() {
             document.getElementById('cartOverlay').classList.remove('open');
             document.getElementById('cartModal').classList.remove('open');
+            document.body.style.overflow = '';
             hideOrderForm();
             document.getElementById('successScreen').classList.remove('active');
         }
@@ -1640,6 +1652,9 @@
         function showOrderForm() {
             document.getElementById('cartItemsView').style.display = 'none';
             document.getElementById('orderForm').classList.add('active');
+            
+            // Скроллим наверх при открытии формы
+            document.querySelector('.cart-content').scrollTop = 0;
             
             if (tg?.initDataUnsafe?.user) {
                 const user = tg.initDataUnsafe.user;
