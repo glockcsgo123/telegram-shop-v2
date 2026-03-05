@@ -19,6 +19,76 @@
             min-height: 100vh;
         }
 
+        /* Mobile Header */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #111;
+            border-bottom: 1px solid #222;
+            padding: 0 16px;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 150;
+        }
+
+        .mobile-logo {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .menu-toggle {
+            width: 44px;
+            height: 44px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: #fff;
+            transition: all 0.3s;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* Sidebar Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 199;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar-overlay.open {
+            opacity: 1;
+        }
+
         /* Sidebar */
         .sidebar {
             position: fixed;
@@ -29,7 +99,8 @@
             background: #111;
             border-right: 1px solid #222;
             padding: 20px 0;
-            z-index: 100;
+            z-index: 200;
+            transition: transform 0.3s ease;
         }
 
         .sidebar-logo {
@@ -48,11 +119,12 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 20px;
+            padding: 14px 20px;
             color: #888;
             text-decoration: none;
             transition: all 0.2s;
             border-left: 3px solid transparent;
+            font-size: 15px;
         }
 
         .nav-item:hover {
@@ -70,6 +142,7 @@
             width: 20px;
             height: 20px;
             opacity: 0.7;
+            flex-shrink: 0;
         }
 
         .sidebar-footer {
@@ -97,6 +170,7 @@
             align-items: center;
             justify-content: center;
             font-weight: 600;
+            flex-shrink: 0;
         }
 
         .admin-name {
@@ -107,7 +181,7 @@
         .logout-btn {
             display: block;
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: transparent;
             border: 1px solid #333;
             border-radius: 8px;
@@ -137,6 +211,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
         .page-title {
@@ -159,6 +235,7 @@
             cursor: pointer;
             text-decoration: none;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .btn:hover {
@@ -197,6 +274,7 @@
             border-radius: 12px;
             padding: 24px;
             margin-bottom: 20px;
+            overflow-x: auto;
         }
 
         .card-header {
@@ -240,11 +318,14 @@
         /* Table */
         .table-wrapper {
             overflow-x: auto;
+            margin: -24px;
+            padding: 24px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px;
         }
 
         th, td {
@@ -259,6 +340,7 @@
             color: #888;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            white-space: nowrap;
         }
 
         td {
@@ -281,6 +363,7 @@
             background: #222;
             border-radius: 8px;
             object-fit: cover;
+            flex-shrink: 0;
         }
 
         .product-name {
@@ -299,6 +382,7 @@
             border-radius: 20px;
             font-size: 11px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .tag-new { background: #003d00; color: #4ade80; }
@@ -311,6 +395,7 @@
             border-radius: 20px;
             font-size: 11px;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .status-new { background: #003d3d; color: #22d3d1; }
@@ -324,7 +409,7 @@
         }
 
         .action-btn {
-            padding: 6px 10px;
+            padding: 8px 12px;
             background: #222;
             border: none;
             border-radius: 6px;
@@ -333,6 +418,7 @@
             cursor: pointer;
             text-decoration: none;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .action-btn:hover {
@@ -365,7 +451,7 @@
             border: 1px solid #333;
             border-radius: 8px;
             color: #fff;
-            font-size: 14px;
+            font-size: 16px;
             font-family: inherit;
             transition: border-color 0.2s;
         }
@@ -428,7 +514,7 @@
         .file-upload {
             border: 2px dashed #333;
             border-radius: 12px;
-            padding: 40px;
+            padding: 40px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
@@ -495,28 +581,6 @@
             margin-bottom: 16px;
         }
 
-        /* Mobile */
-        @media (max-width: 1024px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
-            .main {
-                margin-left: 0;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
         /* Select styling */
         select.form-input {
             appearance: none;
@@ -525,22 +589,142 @@
             background-position: right 16px center;
             padding-right: 40px;
         }
+
+        /* ========== MOBILE STYLES ========== */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            /* Show mobile header */
+            .mobile-header {
+                display: flex;
+            }
+
+            /* Show overlay */
+            .sidebar-overlay {
+                display: block;
+                pointer-events: none;
+            }
+
+            .sidebar-overlay.open {
+                pointer-events: auto;
+            }
+
+            /* Sidebar - hidden by default on mobile */
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            /* Main content adjustments */
+            .main {
+                margin-left: 0;
+                padding: 80px 16px 24px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .card {
+                padding: 16px;
+                margin-left: -16px;
+                margin-right: -16px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .file-upload {
+                padding: 30px 16px;
+            }
+
+            .actions {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .action-btn {
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .checkbox-group {
+                gap: 8px;
+            }
+
+            .checkbox-item {
+                padding: 8px 12px;
+            }
+
+            .form-input {
+                padding: 14px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <span class="mobile-logo">2SOUL</span>
+        <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </header>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMenu()"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">2SOUL</div>
         
         <nav class="sidebar-nav">
-            <a href="{{ url_for('admin_products') }}" class="nav-item {% if 'product' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin_products') }}" class="nav-item {% if 'product' in request.endpoint %}active{% endif %}" onclick="closeMenu()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
                     <line x1="7" y1="7" x2="7.01" y2="7"/>
                 </svg>
                 Товары
             </a>
-            <a href="{{ url_for('admin_orders') }}" class="nav-item {% if 'order' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin_orders') }}" class="nav-item {% if 'order' in request.endpoint %}active{% endif %}" onclick="closeMenu()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
                     <line x1="3" y1="6" x2="21" y2="6"/>
@@ -548,7 +732,7 @@
                 </svg>
                 Заказы
             </a>
-            <a href="{{ url_for('admin_categories') }}" class="nav-item {% if 'categor' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin_categories') }}" class="nav-item {% if 'categor' in request.endpoint %}active{% endif %}" onclick="closeMenu()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="8" y1="6" x2="21" y2="6"/>
                     <line x1="8" y1="12" x2="21" y2="12"/>
@@ -559,7 +743,7 @@
                 </svg>
                 Категории
             </a>
-            <a href="{{ url_for('admin_settings') }}" class="nav-item {% if 'setting' in request.endpoint %}active{% endif %}">
+            <a href="{{ url_for('admin_settings') }}" class="nav-item {% if 'setting' in request.endpoint %}active{% endif %}" onclick="closeMenu()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="3"/>
                     <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
@@ -581,6 +765,39 @@
     <main class="main">
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('menuToggle');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+            toggle.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+        }
+
+        function closeMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const toggle = document.getElementById('menuToggle');
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            toggle.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close menu on resize if switching to desktop
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                closeMenu();
+            }
+        });
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>
