@@ -1306,7 +1306,7 @@
         // State
         let products = [];
         let categories = [];
-        let cart = [];
+        let cart = loadCart(); // Загружаем корзину из localStorage
         let currentProduct = null;
         let selectedSize = null;
         let currentGalleryIndex = 0;
@@ -1316,6 +1316,24 @@
         let isSubmitting = false;
         let lastOrderTime = parseInt(localStorage.getItem('lastOrderTime') || '0');
         let cdekWidget = null;
+
+        // Функции для сохранения/загрузки корзины
+        function saveCart() {
+            try {
+                localStorage.setItem('2soul_cart', JSON.stringify(cart));
+            } catch (e) {
+                console.log('Could not save cart');
+            }
+        }
+
+        function loadCart() {
+            try {
+                const saved = localStorage.getItem('2soul_cart');
+                return saved ? JSON.parse(saved) : [];
+            } catch (e) {
+                return [];
+            }
+        }
 
         // Load Data
         async function loadData() {
@@ -1548,6 +1566,7 @@
                 });
             }
             
+            saveCart(); // Сохраняем корзину
             updateCartBadge();
             closeProductModal();
             
@@ -1630,6 +1649,7 @@
         function changeQty(index, delta) {
             cart[index].qty += delta;
             if (cart[index].qty <= 0) cart.splice(index, 1);
+            saveCart(); // Сохраняем корзину
             renderCartItems();
             updateCartBadge();
             if (tg) tg.HapticFeedback?.selectionChanged();
@@ -1637,6 +1657,7 @@
 
         function removeItem(index) {
             cart.splice(index, 1);
+            saveCart(); // Сохраняем корзину
             renderCartItems();
             updateCartBadge();
             if (tg) tg.HapticFeedback?.impactOccurred('light');
@@ -1870,6 +1891,7 @@
                 if (tg) tg.HapticFeedback?.notificationOccurred('success');
                 
                 cart = [];
+                saveCart(); // Очищаем сохранённую корзину
                 selectedCdekPoint = null;
                 updateCartBadge();
                 
@@ -1897,6 +1919,7 @@
 
         // Init
         loadData();
+        updateCartBadge(); // Обновляем badge при загрузке
     </script>
 </body>
 </html>
