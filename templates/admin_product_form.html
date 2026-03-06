@@ -19,6 +19,15 @@
             </div>
             
             <div class="form-group">
+                <label class="form-label">Цена (₽)</label>
+                <input type="number" name="price" class="form-input" required 
+                       value="{{ product.price if product else '' }}" 
+                       placeholder="4990">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
                 <label class="form-label">Категория</label>
                 <select name="category_id" class="form-input" required>
                     <option value="">Выберите категорию</option>
@@ -30,26 +39,7 @@
                     {% endfor %}
                 </select>
             </div>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Цена (₽)</label>
-                <input type="number" name="price" class="form-input" required 
-                       value="{{ product.price if product else '' }}" 
-                       placeholder="4990">
-            </div>
             
-            <div class="form-group">
-                <label class="form-label">Цена со скидкой (₽)</label>
-                <input type="number" name="sale_price" class="form-input" 
-                       value="{{ product.sale_price if product and product.sale_price else '' }}" 
-                       placeholder="Оставьте пустым если без скидки">
-                <p style="font-size: 11px; color: #888; margin-top: 4px;">Если указана — основная цена будет перечёркнута</p>
-            </div>
-        </div>
-        
-        <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Тег (необязательно)</label>
                 <select name="tag" class="form-input">
@@ -58,9 +48,6 @@
                     <option value="hit" {{ 'selected' if product and product.tag == 'hit' else '' }}>🔥 Хит</option>
                     <option value="sale" {{ 'selected' if product and product.tag == 'sale' else '' }}>💰 Скидка</option>
                 </select>
-            </div>
-            
-            <div class="form-group">
             </div>
         </div>
         
