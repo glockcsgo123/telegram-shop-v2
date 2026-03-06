@@ -1067,6 +1067,115 @@
             font-size: 12px;
             color: var(--gray);
         }
+
+        /* Privacy Consent */
+        .privacy-consent {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .privacy-consent input {
+            display: none;
+        }
+
+        .privacy-checkmark {
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-top: 2px;
+        }
+
+        .privacy-consent input:checked + .privacy-checkmark {
+            background: var(--white);
+            border-color: var(--white);
+        }
+
+        .privacy-consent input:checked + .privacy-checkmark::after {
+            content: '✓';
+            color: var(--bg);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .privacy-text {
+            color: var(--gray);
+        }
+
+        .privacy-text a {
+            color: var(--white);
+            text-decoration: underline;
+        }
+
+        /* Privacy Modal */
+        .privacy-modal {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 300;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .privacy-modal.open {
+            transform: translateY(0);
+        }
+
+        .privacy-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .privacy-modal-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .privacy-modal-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .privacy-modal-content h2 {
+            font-size: 15px;
+            margin: 20px 0 10px;
+        }
+
+        .privacy-modal-content h2:first-child {
+            margin-top: 0;
+        }
+
+        .privacy-modal-content p {
+            font-size: 13px;
+            color: var(--gray);
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .privacy-modal-content ul {
+            font-size: 13px;
+            color: var(--gray);
+            line-height: 1.6;
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -1254,12 +1363,23 @@
                 </div>
             </div>
 
+            <!-- Согласие на обработку ПД -->
+            <div class="form-section">
+                <label class="privacy-consent">
+                    <input type="checkbox" id="privacyConsent">
+                    <span class="privacy-checkmark"></span>
+                    <span class="privacy-text">
+                        Я соглашаюсь на <a href="#" onclick="openPrivacyPolicy(event)">обработку персональных данных</a>
+                    </span>
+                </label>
+            </div>
+
             <div class="cart-footer" style="padding: 0; border: none; margin-top: 20px;">
                 <div class="cart-total">
                     <span class="cart-total-label">К оплате</span>
                     <span class="cart-total-price" id="orderTotal">0 ₽</span>
                 </div>
-                <button class="checkout-btn" onclick="submitOrder()">Подтвердить заказ</button>
+                <button class="checkout-btn" id="submitOrderBtn" onclick="submitOrder()">Подтвердить заказ</button>
             </div>
         </div>
 
@@ -1286,6 +1406,70 @@
             </button>
         </div>
         <div id="cdekWidgetContainer" style="width: 100%; height: calc(100vh - 60px);"></div>
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div class="privacy-modal" id="privacyModal">
+        <div class="privacy-modal-header">
+            <span class="privacy-modal-title">Политика конфиденциальности</span>
+            <button class="cart-close" onclick="closePrivacyPolicy()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div class="privacy-modal-content">
+            <h2>1. Общие положения</h2>
+            <p>Настоящая Политика конфиденциальности определяет порядок обработки и защиты персональных данных пользователей интернет-магазина 2SOUL (далее — «Магазин»).</p>
+            <p>Оформляя заказ, вы даёте согласие на обработку персональных данных в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».</p>
+
+            <h2>2. Какие данные мы собираем</h2>
+            <p>При оформлении заказа мы можем запрашивать:</p>
+            <ul>
+                <li>Имя</li>
+                <li>Номер телефона</li>
+                <li>Контакт в Telegram или ВКонтакте</li>
+                <li>Город и адрес пункта выдачи СДЭК</li>
+                <li>Комментарий к заказу</li>
+            </ul>
+
+            <h2>3. Цели обработки данных</h2>
+            <p>Ваши данные используются исключительно для:</p>
+            <ul>
+                <li>Обработки и доставки заказов</li>
+                <li>Связи с вами по вопросам заказа</li>
+                <li>Улучшения качества обслуживания</li>
+            </ul>
+
+            <h2>4. Защита данных</h2>
+            <p>Мы принимаем необходимые организационные и технические меры для защиты ваших персональных данных от неправомерного доступа, изменения, раскрытия или уничтожения.</p>
+            <p>Мы не передаём ваши данные третьим лицам, за исключением случаев, необходимых для доставки заказа (служба доставки СДЭК).</p>
+
+            <h2>5. Хранение данных</h2>
+            <p>Персональные данные хранятся в течение срока, необходимого для выполнения целей обработки, но не более 3 лет с момента последнего заказа.</p>
+
+            <h2>6. Ваши права</h2>
+            <p>Вы имеете право:</p>
+            <ul>
+                <li>Получить информацию о своих персональных данных</li>
+                <li>Требовать исправления неточных данных</li>
+                <li>Требовать удаления своих данных</li>
+                <li>Отозвать согласие на обработку данных</li>
+            </ul>
+
+            <h2>7. Контакты</h2>
+            <p>По всем вопросам, связанным с обработкой персональных данных, вы можете обратиться:</p>
+            <ul>
+                <li>Email: shidlovsky.benjamin@yandex.ru</li>
+                <li>Telegram: @manager2soul</li>
+            </ul>
+
+            <h2>8. Изменения</h2>
+            <p>Мы оставляем за собой право вносить изменения в настоящую Политику. Актуальная версия всегда доступна на сайте.</p>
+            
+            <p style="margin-top: 20px; color: #555; font-size: 12px;">Дата последнего обновления: март 2026</p>
+        </div>
     </div>
 
     <script>
@@ -1788,6 +1972,18 @@
             document.getElementById('cdekModal').classList.remove('open');
         }
 
+        // Privacy Policy
+        function openPrivacyPolicy(event) {
+            if (event) event.preventDefault();
+            document.getElementById('privacyModal').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePrivacyPolicy() {
+            document.getElementById('privacyModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
         // Anti-spam check
         function canSubmitOrder() {
             const now = Date.now();
@@ -1805,6 +2001,14 @@
         async function submitOrder() {
             // Prevent double submission
             if (isSubmitting) return;
+            
+            // Check privacy consent
+            const privacyConsent = document.getElementById('privacyConsent').checked;
+            if (!privacyConsent) {
+                if (tg) tg.HapticFeedback?.notificationOccurred('error');
+                alert('Необходимо согласие на обработку персональных данных');
+                return;
+            }
             
             // Anti-spam check
             const spamCheck = canSubmitOrder();
