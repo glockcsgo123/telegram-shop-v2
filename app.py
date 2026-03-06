@@ -2,7 +2,6 @@
 2SOUL Shop - Backend
 Flask + SQLite + Admin Panel
 Поддержка нескольких фото, описания товаров, СДЭК
-Фото сохраняются в /data/uploads/ для persistentMount
 """
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session, send_from_directory
@@ -19,16 +18,11 @@ app = Flask(__name__)
 app.secret_key = 'change-this-secret-key-2soul-shop'  # ПОМЕНЯЙ!
 CORS(app)
 
-# Путь к данным — /data для Amvera (persistentMount)
-DATA_DIR = '/data' if os.path.exists('/data') else '.'
-DB_PATH = os.path.join(DATA_DIR, 'shop.db')
-UPLOAD_FOLDER = os.path.join(DATA_DIR, 'uploads')
-
+UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB
 
-# Создаём папки
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs('static', exist_ok=True)
 os.makedirs('templates', exist_ok=True)
@@ -37,7 +31,7 @@ os.makedirs('templates', exist_ok=True)
 # ==================== DATABASE ====================
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect('shop.db')
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -96,34 +90,33 @@ def init_db():
         )
     ''')
     
-    # Миграции
+    # Добавляем новые колонки если их нет (для миграции)
     try:
         cursor.execute('ALTER TABLE products ADD COLUMN description TEXT')
     except:
         pass
-    
     try:
         cursor.execute('ALTER TABLE products ADD COLUMN images TEXT DEFAULT "[]"')
     except:
         pass
-    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN customer_telegram TEXT')
     except:
         pass
-    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN customer_vk TEXT')
     except:
         pass
-    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN cdek_point TEXT')
     except:
         pass
-    
     try:
         cursor.execute('ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT "sbp"')
+    except:
+        pass
+    try:
+        cursor.execute('ALTER TABLE products ADD COLUMN sale_price INTEGER')
     except:
         pass
     
@@ -176,16 +169,8 @@ def save_uploaded_file(file):
         ext = file.filename.rsplit('.', 1)[1].lower()
         filename = f"{uuid.uuid4().hex}.{ext}"
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return f"/uploads/{filename}"
+        return f"/static/uploads/{filename}"
     return None
-
-
-# ==================== UPLOADS ROUTE ====================
-
-@app.route('/uploads/<path:filename>')
-def serve_uploads(filename):
-    """Отдаём файлы из /data/uploads/"""
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
 # ==================== API ====================
@@ -205,6 +190,7 @@ def api_products():
     
     products = []
     for row in cursor.fetchall():
+        # Парсим images
         images = []
         try:
             images = json.loads(row['images']) if row['images'] else []
@@ -212,6 +198,7 @@ def api_products():
             if row['images']:
                 images = [row['images']]
         
+        # Для обратной совместимости
         main_image = images[0] if images else None
         
         products.append({
@@ -224,7 +211,8 @@ def api_products():
             'image': main_image,
             'images': images,
             'sizes': json.loads(row['sizes']) if row['sizes'] else ['S', 'M', 'L', 'XL'],
-            'tag': row['tag']
+            'tag': row['tag'],
+            'sale_price': row['sale_price'] if 'sale_price' in row.keys() else None
         })
     
     conn.close()
@@ -278,74 +266,12 @@ def api_create_order():
     return jsonify({'success': True, 'order_id': order_id})
 
 
-# ==================== ADMIN API для порядка фото ====================
-
-@app.route('/admin/api/products/<int:product_id>/reorder-images', methods=['POST'])
-@login_required
-def admin_reorder_images(product_id):
-    """API для изменения порядка фотографий"""
-    data = request.json
-    new_order = data.get('images', [])
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('UPDATE products SET images = ? WHERE id = ?', 
-                   (json.dumps(new_order), product_id))
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'success': True})
-
-
-@app.route('/admin/api/products/<int:product_id>/delete-image', methods=['POST'])
-@login_required
-def admin_delete_image(product_id):
-    """API для удаления одного фото"""
-    data = request.json
-    image_to_delete = data.get('image')
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT images FROM products WHERE id = ?', (product_id,))
-    product = cursor.fetchone()
-    
-    if product:
-        try:
-            images = json.loads(product['images']) if product['images'] else []
-            if image_to_delete in images:
-                images.remove(image_to_delete)
-                
-                # Удаляем файл
-                try:
-                    filename = image_to_delete.replace('/uploads/', '')
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                except:
-                    pass
-                
-                cursor.execute('UPDATE products SET images = ? WHERE id = ?',
-                             (json.dumps(images), product_id))
-                conn.commit()
-        except:
-            pass
-    
-    conn.close()
-    return jsonify({'success': True})
-
-
 # ==================== ADMIN ====================
-
-@app.route('/admin')
-def admin_index():
-    if 'admin_id' in session:
-        return redirect(url_for('admin_products'))
-    return redirect(url_for('admin_login'))
-
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     error = None
+    
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -358,7 +284,8 @@ def admin_login():
         
         if admin and check_password_hash(admin['password'], password):
             session['admin_id'] = admin['id']
-            return redirect(url_for('admin_products'))
+            session['admin_username'] = admin['username']
+            return redirect(url_for('admin_dashboard'))
         else:
             error = 'Неверный логин или пароль'
     
@@ -367,8 +294,35 @@ def admin_login():
 
 @app.route('/admin/logout')
 def admin_logout():
-    session.pop('admin_id', None)
+    session.clear()
     return redirect(url_for('admin_login'))
+
+
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT COUNT(*) FROM products WHERE active = 1')
+    products_count = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT COUNT(*) FROM orders')
+    orders_count = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT COUNT(*) FROM orders WHERE status = "new"')
+    new_orders_count = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT SUM(total) FROM orders')
+    total_revenue = cursor.fetchone()[0] or 0
+    
+    conn.close()
+    
+    return render_template('admin_dashboard.html', 
+                         products_count=products_count,
+                         orders_count=orders_count,
+                         new_orders_count=new_orders_count,
+                         total_revenue=total_revenue)
 
 
 @app.route('/admin/products')
@@ -405,6 +359,7 @@ def admin_add_product():
         name = request.form.get('name')
         category_id = request.form.get('category_id')
         price = request.form.get('price')
+        sale_price = request.form.get('sale_price') or None
         description = request.form.get('description', '')
         sizes = request.form.getlist('sizes')
         tag = request.form.get('tag') or None
@@ -418,9 +373,9 @@ def admin_add_product():
                 images.append(path)
         
         cursor.execute('''
-            INSERT INTO products (name, category_id, price, description, images, sizes, tag)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (name, category_id, price, description, json.dumps(images), json.dumps(sizes), tag))
+            INSERT INTO products (name, category_id, price, sale_price, description, images, sizes, tag)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (name, category_id, price, sale_price, description, json.dumps(images), json.dumps(sizes), tag))
         
         conn.commit()
         conn.close()
@@ -451,20 +406,29 @@ def admin_edit_product(product_id):
         name = request.form.get('name')
         category_id = request.form.get('category_id')
         price = request.form.get('price')
+        sale_price = request.form.get('sale_price') or None
         description = request.form.get('description', '')
         sizes = request.form.getlist('sizes')
         tag = request.form.get('tag') or None
         active = 1 if request.form.get('active') else 0
         
-        # Получаем порядок изображений из формы
-        images_order = request.form.get('images_order', '[]')
+        # Текущие изображения
         try:
-            current_images = json.loads(images_order)
+            current_images = json.loads(product['images']) if product['images'] else []
         except:
-            try:
-                current_images = json.loads(product['images']) if product['images'] else []
-            except:
-                current_images = []
+            current_images = []
+        
+        # Удаляемые изображения
+        remove_images = request.form.getlist('remove_images')
+        for img_path in remove_images:
+            if img_path in current_images:
+                current_images.remove(img_path)
+                # Удаляем файл
+                try:
+                    file_path = img_path.replace('/static/uploads/', '')
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], file_path))
+                except:
+                    pass
         
         # Новые изображения
         files = request.files.getlist('images')
@@ -475,9 +439,9 @@ def admin_edit_product(product_id):
         
         cursor.execute('''
             UPDATE products 
-            SET name=?, category_id=?, price=?, description=?, images=?, sizes=?, tag=?, active=?
+            SET name=?, category_id=?, price=?, sale_price=?, description=?, images=?, sizes=?, tag=?, active=?
             WHERE id=?
-        ''', (name, category_id, price, description, json.dumps(current_images), json.dumps(sizes), tag, active, product_id))
+        ''', (name, category_id, price, sale_price, description, json.dumps(current_images), json.dumps(sizes), tag, active, product_id))
         
         conn.commit()
         conn.close()
@@ -502,8 +466,8 @@ def admin_delete_product(product_id):
             images = json.loads(product['images'])
             for img_path in images:
                 try:
-                    filename = img_path.replace('/uploads/', '')
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    file_path = img_path.replace('/static/uploads/', '')
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], file_path))
                 except:
                     pass
         except:
@@ -624,9 +588,8 @@ def static_files(filename):
     return send_from_directory('static', filename)
 
 
-# Инициализация БД при запуске
-init_db()
+# ==================== MAIN ====================
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    init_db()
+    app.run(debug=True, host='0.0.0.0', port=5001)

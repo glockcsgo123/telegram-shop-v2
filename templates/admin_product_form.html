@@ -1,390 +1,275 @@
 {% extends "admin_base.html" %}
 
-{% block title %}{{ 'Редактировать товар' if product else 'Добавить товар' }}{% endblock %}
+{% block title %}{{ 'Редактировать' if product else 'Добавить' }} товар — 2SOUL Admin{% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h1 class="page-title">{{ 'Редактировать товар' if product else 'Добавить товар' }}</h1>
-    <a href="{{ url_for('admin_products') }}" class="btn btn-outline">← Назад</a>
+    <h1 class="page-title">{{ 'Редактировать товар' if product else 'Новый товар' }}</h1>
 </div>
 
 <div class="card">
     <form method="POST" enctype="multipart/form-data" id="productForm">
         <div class="form-row">
             <div class="form-group">
-                <label class="form-label">Название товара</label>
-                <input type="text" name="name" class="form-input" required 
+                <label class="form-label">Название товара *</label>
+                <input type="text" name="name" class="form-input" 
                        value="{{ product.name if product else '' }}" 
-                       placeholder="Например: Худи Oversize Black">
+                       placeholder="Например: Худи Oversize Black" required>
             </div>
             
             <div class="form-group">
-                <label class="form-label">Цена (₽)</label>
-                <input type="number" name="price" class="form-input" required 
-                       value="{{ product.price if product else '' }}" 
-                       placeholder="4990">
-            </div>
-        </div>
-        
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Категория</label>
+                <label class="form-label">Категория *</label>
                 <select name="category_id" class="form-input" required>
                     <option value="">Выберите категорию</option>
                     {% for cat in categories %}
                     <option value="{{ cat.id }}" 
-                            {{ 'selected' if product and product.category_id == cat.id else '' }}>
+                            {% if product and product.category_id == cat.id %}selected{% endif %}>
                         {{ cat.name }}
                     </option>
                     {% endfor %}
                 </select>
             </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Цена (₽) *</label>
+                <input type="number" name="price" class="form-input" 
+                       value="{{ product.price if product else '' }}" 
+                       placeholder="4990" min="0" required>
+            </div>
             
             <div class="form-group">
-                <label class="form-label">Тег (необязательно)</label>
+                <label class="form-label">Цена со скидкой (₽)</label>
+                <input type="number" name="sale_price" class="form-input" 
+                       value="{{ product.sale_price if product and product.sale_price else '' }}" 
+                       placeholder="Оставьте пустым если без скидки" min="0">
+                <p style="font-size: 11px; color: #888; margin-top: 4px;">Если указана — основная цена будет перечёркнута</p>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Метка</label>
                 <select name="tag" class="form-input">
-                    <option value="">Без тега</option>
-                    <option value="new" {{ 'selected' if product and product.tag == 'new' else '' }}>🆕 Новинка</option>
-                    <option value="hit" {{ 'selected' if product and product.tag == 'hit' else '' }}>🔥 Хит</option>
-                    <option value="sale" {{ 'selected' if product and product.tag == 'sale' else '' }}>💰 Скидка</option>
+                    <option value="">Без метки</option>
+                    <option value="NEW" {% if product and product.tag == 'NEW' %}selected{% endif %}>NEW</option>
+                    <option value="HIT" {% if product and product.tag == 'HIT' %}selected{% endif %}>HIT</option>
+                    <option value="SALE" {% if product and product.tag == 'SALE' %}selected{% endif %}>SALE</option>
                 </select>
             </div>
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Описание</label>
-            <textarea name="description" class="form-input" rows="4" 
-                      placeholder="Подробное описание товара...">{{ product.description if product else '' }}</textarea>
-        </div>
-        
-        <!-- Размеры -->
-        <div class="form-group">
-            <label class="form-label">Размеры</label>
-            <div class="sizes-section">
-                <div class="sizes-standard">
-                    <span class="sizes-label">Стандартные:</span>
-                    <div class="checkbox-group">
-                        {% for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] %}
-                        <label class="checkbox-item">
-                            <input type="checkbox" name="sizes" value="{{ size }}" class="size-checkbox"
-                                   {% if not product %}{% if size in ['S', 'M', 'L', 'XL'] %}checked{% endif %}{% endif %}
-                                   {% if product and product.sizes and size in product.sizes %}checked{% endif %}>
-                            <span class="checkbox-label">{{ size }}</span>
-                        </label>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                <div class="sizes-custom">
-                    <span class="sizes-label">Свои размеры:</span>
-                    <div class="custom-sizes-input">
-                        <input type="text" id="customSizeInput" class="form-input" 
-                               placeholder="Например: 42, 44-46, ONE SIZE" style="flex: 1;">
-                        <button type="button" class="btn btn-outline" onclick="addCustomSize()">+ Добавить</button>
-                    </div>
-                    <div class="custom-sizes-list" id="customSizesList">
-                        <!-- Кастомные размеры будут здесь -->
-                    </div>
-                </div>
+            
+            <div class="form-group">
+                <label class="form-label">&nbsp;</label>
             </div>
         </div>
         
-        <!-- Текущие фотографии -->
-        {% if product %}
         <div class="form-group">
-            <label class="form-label">Текущие фотографии <span style="color: #888; font-weight: normal;">(перетаскивайте для изменения порядка, первое = главное)</span></label>
-            <div class="images-grid" id="imagesGrid"></div>
-            <input type="hidden" name="images_order" id="imagesOrder" value="{{ product.images if product else '[]' }}">
+            <label class="form-label">Описание товара</label>
+            <textarea name="description" class="form-input" rows="4" 
+                      placeholder="Описание материала, особенностей, ухода за изделием...">{{ product.description if product else '' }}</textarea>
         </div>
-        {% endif %}
         
         <div class="form-group">
-            <label class="form-label">{{ 'Добавить фотографии' if product else 'Фотографии' }}</label>
+            <label class="form-label">Размеры *</label>
+            <div class="checkbox-group" id="sizesGroup">
+                {% set current_sizes = product.sizes|default('[]') if product else '["S","M","L","XL"]' %}
+                {% for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'] %}
+                <label class="checkbox-item">
+                    <input type="checkbox" name="sizes" value="{{ size }}" 
+                           {% if size in current_sizes %}checked{% endif %}>
+                    <span class="checkbox-label">{{ size }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            
+            <!-- Кастомные размеры -->
+            <div id="customSizesContainer" style="margin-top: 12px;"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 12px;">
+                <input type="text" id="customSizeInput" class="form-input" 
+                       placeholder="Свой размер (напр. 42, 44-46, 170/92)" 
+                       style="width: 250px;">
+                <button type="button" class="btn btn-outline" onclick="addCustomSize()">
+                    + Добавить
+                </button>
+            </div>
+            <p style="font-size: 11px; color: #666; margin-top: 8px;">
+                Можно добавлять цифровые размеры: 40, 42, 44 и т.д.
+            </p>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Фотографии товара (можно загрузить несколько)</label>
             <label class="file-upload" id="fileUpload">
-                <input type="file" name="images" multiple accept="image/*" id="imageInput">
-                <div class="file-upload-text">📷 Нажмите или перетащите файлы сюда</div>
-                <div class="file-upload-hint">PNG, JPG, WEBP до 32MB. Можно выбрать несколько.</div>
+                <input type="file" name="images" accept="image/*" id="imageInput" multiple>
+                <div class="file-upload-text">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 10px; display: block; opacity: 0.5;">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Нажмите или перетащите файлы
+                </div>
+                <div class="file-upload-hint">PNG, JPG, WEBP до 32MB. Первое фото — главное</div>
             </label>
-            <div class="preview-grid" id="previewGrid"></div>
+            
+            <!-- Preview new images -->
+            <div id="imagePreview" class="image-preview-grid" style="display: none; margin-top: 16px;"></div>
+            
+            <!-- Current images (edit mode) -->
+            {% if product and product.images %}
+            <div class="current-images" style="margin-top: 16px;">
+                <p style="font-size: 13px; color: #888; margin-bottom: 12px;">Текущие фото (отметьте для удаления):</p>
+                <div class="image-preview-grid">
+                    {% set images = product.images | default('[]') %}
+                    {% for img in images | tojson | default([]) %}
+                    <!-- Images will be rendered by JS -->
+                    {% endfor %}
+                </div>
+                <div id="currentImages" data-images='{{ product.images }}'></div>
+            </div>
+            {% endif %}
         </div>
         
         {% if product %}
         <div class="form-group">
             <label class="checkbox-item" style="display: inline-flex;">
-                <input type="checkbox" name="active" value="1" 
-                       {{ 'checked' if product.active else '' }}>
-                <span class="checkbox-label">Товар активен (отображается в каталоге)</span>
+                <input type="checkbox" name="active" {% if product.active %}checked{% endif %}>
+                <span class="checkbox-label">Товар активен (показывать в магазине)</span>
             </label>
         </div>
         {% endif %}
         
         <div style="display: flex; gap: 12px; margin-top: 30px;">
-            <button type="submit" class="btn">💾 Сохранить</button>
+            <button type="submit" class="btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                {{ 'Сохранить' if product else 'Добавить товар' }}
+            </button>
             <a href="{{ url_for('admin_products') }}" class="btn btn-outline">Отмена</a>
         </div>
     </form>
 </div>
 
 <style>
-/* Секция размеров */
-.sizes-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.sizes-label {
-    font-size: 12px;
-    color: #888;
-    margin-bottom: 8px;
-    display: block;
-}
-
-.sizes-standard .checkbox-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.custom-sizes-input {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.custom-sizes-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.custom-size-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    background: #222;
-    border: 1px solid #444;
-    border-radius: 8px;
-    font-size: 14px;
-}
-
-.custom-size-tag .remove-size {
-    background: none;
-    border: none;
-    color: #f87171;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 0;
-    line-height: 1;
-}
-
-.custom-size-tag .remove-size:hover {
-    color: #ff6b6b;
-}
-
-/* Сетка изображений - ФИКСИРОВАННЫЙ РАЗМЕР */
-.images-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 120px);
-    gap: 12px;
-    margin-top: 12px;
-}
-
-.image-item {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    border-radius: 10px;
-    overflow: hidden;
-    cursor: grab;
-    border: 2px solid #333;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-
-.image-item:active {
-    cursor: grabbing;
-}
-
-.image-item.dragging {
-    opacity: 0.5;
-    border-color: #666;
-}
-
-.image-item.drag-over {
-    border-color: #fff;
-    transform: scale(1.05);
-}
-
-.image-item.main {
-    border-color: #4ade80;
-}
-
-.image-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.image-item .badge {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    background: #4ade80;
-    color: #000;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 600;
-}
-
-.image-item .delete-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    background: rgba(0,0,0,0.8);
-    border: none;
-    border-radius: 50%;
-    color: #f87171;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.image-item:hover .delete-btn {
-    opacity: 1;
-}
-
-.image-item .delete-btn:hover {
-    background: #f87171;
-    color: #fff;
-}
-
-.image-item .order-num {
-    position: absolute;
-    bottom: 6px;
-    left: 6px;
-    background: rgba(0,0,0,0.8);
-    color: #fff;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-/* Превью новых файлов */
-.preview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 80px);
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.preview-item {
-    width: 80px;
-    height: 80px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 2px solid #333;
-}
-
-.preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-/* Мобильная адаптация */
-@media (max-width: 768px) {
-    .images-grid {
-        grid-template-columns: repeat(3, 1fr);
+    textarea.form-input {
+        resize: vertical;
+        min-height: 100px;
     }
     
-    .image-item {
+    .image-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+    }
+    
+    .image-preview-item {
+        position: relative;
+        aspect-ratio: 3/4;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #1a1a1a;
+    }
+    
+    .image-preview-item img {
         width: 100%;
-        height: auto;
-        aspect-ratio: 1;
+        height: 100%;
+        object-fit: cover;
     }
     
-    .custom-sizes-input {
-        flex-direction: column;
+    .image-preview-item .remove-btn {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 24px;
+        height: 24px;
+        background: rgba(0,0,0,0.7);
+        border: none;
+        border-radius: 50%;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
     }
-}
+    
+    .image-preview-item .main-badge {
+        position: absolute;
+        bottom: 6px;
+        left: 6px;
+        background: #fff;
+        color: #000;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 3px 6px;
+        border-radius: 4px;
+    }
+    
+    .image-preview-item label {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.5);
+        opacity: 0;
+        transition: opacity 0.2s;
+        cursor: pointer;
+    }
+    
+    .image-preview-item:hover label {
+        opacity: 1;
+    }
+    
+    .image-preview-item input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+    }
+    
+    .image-preview-item input[type="checkbox"]:checked + .overlay {
+        opacity: 1;
+        background: rgba(255, 0, 0, 0.5);
+    }
 </style>
+{% endblock %}
 
+{% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const imagesGrid = document.getElementById('imagesGrid');
-    const imagesOrderInput = document.getElementById('imagesOrder');
-    const imageInput = document.getElementById('imageInput');
-    const previewGrid = document.getElementById('previewGrid');
-    const productId = {{ product.id if product else 'null' }};
+    // Custom sizes
+    let customSizes = [];
     
-    // Стандартные размеры (не кастомные)
-    const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    // Load existing custom sizes (edit mode)
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if product and product.sizes %}
+        try {
+            const allSizes = JSON.parse('{{ product.sizes | safe }}');
+            const standardSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'ONE SIZE'];
+            allSizes.forEach(size => {
+                if (!standardSizes.includes(size)) {
+                    customSizes.push(size);
+                }
+            });
+            renderCustomSizes();
+        } catch(e) {}
+        {% endif %}
+    });
     
-    // Парсим текущие размеры для выявления кастомных
-    let allSizes = [];
-    try {
-        const sizesRaw = '{{ product.sizes | default("[]", true) | safe }}';
-        allSizes = JSON.parse(sizesRaw.replace(/'/g, '"'));
-    } catch(e) {
-        allSizes = ['S', 'M', 'L', 'XL'];
-    }
-    
-    // Отделяем кастомные размеры
-    const customSizes = allSizes.filter(s => !standardSizes.includes(s));
-    
-    // Рендерим кастомные размеры
-    function renderCustomSizes() {
-        const list = document.getElementById('customSizesList');
-        list.innerHTML = '';
-        customSizes.forEach(size => {
-            const tag = document.createElement('div');
-            tag.className = 'custom-size-tag';
-            tag.innerHTML = `
-                <input type="checkbox" name="sizes" value="${size}" checked style="display:none;">
-                <span>${size}</span>
-                <button type="button" class="remove-size" onclick="removeCustomSize('${size}')">✕</button>
-            `;
-            list.appendChild(tag);
-        });
-    }
-    
-    // Добавить кастомный размер
-    window.addCustomSize = function() {
+    function addCustomSize() {
         const input = document.getElementById('customSizeInput');
-        const value = input.value.trim().toUpperCase();
-        if (value && !customSizes.includes(value) && !standardSizes.includes(value)) {
-            customSizes.push(value);
+        const size = input.value.trim();
+        
+        if (size && !customSizes.includes(size)) {
+            customSizes.push(size);
             renderCustomSizes();
             input.value = '';
         }
-    };
+    }
     
-    // Удалить кастомный размер
-    window.removeCustomSize = function(size) {
-        const index = customSizes.indexOf(size);
-        if (index > -1) {
-            customSizes.splice(index, 1);
-            renderCustomSizes();
-        }
-    };
-    
-    // Enter для добавления размера
+    // Enter key support
     document.getElementById('customSizeInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -392,167 +277,135 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Инициализация кастомных размеров
-    renderCustomSizes();
-    
-    // ===== ИЗОБРАЖЕНИЯ =====
-    
-    let currentImages = [];
-    try {
-        const imagesRaw = '{{ product.images | default("[]", true) | safe }}';
-        currentImages = JSON.parse(imagesRaw.replace(/'/g, '"'));
-    } catch(e) {
-        currentImages = [];
+    function removeCustomSize(index) {
+        customSizes.splice(index, 1);
+        renderCustomSizes();
     }
     
-    function renderImages() {
-        if (!imagesGrid) return;
+    function renderCustomSizes() {
+        const container = document.getElementById('customSizesContainer');
         
-        imagesGrid.innerHTML = '';
-        currentImages.forEach((img, index) => {
-            const item = document.createElement('div');
-            item.className = 'image-item' + (index === 0 ? ' main' : '');
-            item.draggable = true;
-            item.dataset.index = index;
-            item.dataset.src = img;
-            
-            item.innerHTML = `
-                <img src="${img}" alt="Фото ${index + 1}">
-                ${index === 0 ? '<div class="badge">Главное</div>' : ''}
-                <div class="order-num">${index + 1}</div>
-                <button type="button" class="delete-btn" onclick="deleteImage('${img}')">✕</button>
-            `;
-            
-            item.addEventListener('dragstart', handleDragStart);
-            item.addEventListener('dragend', handleDragEnd);
-            item.addEventListener('dragover', handleDragOver);
-            item.addEventListener('drop', handleDrop);
-            item.addEventListener('dragleave', handleDragLeave);
-            
-            imagesGrid.appendChild(item);
-        });
-        
-        if (imagesOrderInput) {
-            imagesOrderInput.value = JSON.stringify(currentImages);
+        if (customSizes.length === 0) {
+            container.innerHTML = '';
+            return;
         }
+        
+        container.innerHTML = `
+            <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Добавленные размеры:</div>
+            <div class="checkbox-group">
+                ${customSizes.map((size, i) => `
+                    <label class="checkbox-item" style="position: relative;">
+                        <input type="checkbox" name="sizes" value="${size}" checked>
+                        <span class="checkbox-label">${size}</span>
+                        <button type="button" onclick="removeCustomSize(${i})" 
+                                style="position: absolute; right: -8px; top: -8px; width: 20px; height: 20px; 
+                                       background: #ff4444; border: none; border-radius: 50%; color: #fff; 
+                                       font-size: 12px; cursor: pointer; display: flex; align-items: center; 
+                                       justify-content: center;">×</button>
+                    </label>
+                `).join('')}
+            </div>
+        `;
     }
+
+    // Preview new images
+    const imageInput = document.getElementById('imageInput');
+    const previewContainer = document.getElementById('imagePreview');
+    let selectedFiles = [];
     
-    let draggedItem = null;
+    imageInput.addEventListener('change', function(e) {
+        selectedFiles = Array.from(e.target.files);
+        updatePreview();
+    });
     
-    function handleDragStart(e) {
-        draggedItem = this;
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-    }
-    
-    function handleDragEnd(e) {
-        this.classList.remove('dragging');
-        document.querySelectorAll('.image-item').forEach(item => {
-            item.classList.remove('drag-over');
-        });
-    }
-    
-    function handleDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        if (this !== draggedItem) {
-            this.classList.add('drag-over');
+    function updatePreview() {
+        if (selectedFiles.length === 0) {
+            previewContainer.style.display = 'none';
+            return;
         }
-    }
-    
-    function handleDragLeave(e) {
-        this.classList.remove('drag-over');
-    }
-    
-    function handleDrop(e) {
-        e.preventDefault();
-        this.classList.remove('drag-over');
         
-        if (draggedItem === this) return;
+        previewContainer.style.display = 'grid';
+        previewContainer.innerHTML = '<p style="grid-column: 1/-1; font-size: 13px; color: #888; margin-bottom: 4px;">Новые фото:</p>';
         
-        const fromIndex = parseInt(draggedItem.dataset.index);
-        const toIndex = parseInt(this.dataset.index);
-        
-        const temp = currentImages[fromIndex];
-        currentImages.splice(fromIndex, 1);
-        currentImages.splice(toIndex, 0, temp);
-        
-        renderImages();
-        
-        if (productId) {
-            fetch(`/admin/api/products/${productId}/reorder-images`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({images: currentImages})
-            });
-        }
-    }
-    
-    window.deleteImage = function(imagePath) {
-        if (!confirm('Удалить это фото?')) return;
-        
-        currentImages = currentImages.filter(img => img !== imagePath);
-        renderImages();
-        
-        if (productId) {
-            fetch(`/admin/api/products/${productId}/delete-image`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({image: imagePath})
-            });
-        }
-    };
-    
-    // Превью новых файлов
-    if (imageInput) {
-        imageInput.addEventListener('change', function() {
-            previewGrid.innerHTML = '';
-            
-            Array.from(this.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const item = document.createElement('div');
-                    item.className = 'preview-item';
-                    item.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-                    previewGrid.appendChild(item);
-                };
-                reader.readAsDataURL(file);
-            });
+        selectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const div = document.createElement('div');
+                div.className = 'image-preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="">
+                    ${index === 0 ? '<span class="main-badge">ГЛАВНОЕ</span>' : ''}
+                    <button type="button" class="remove-btn" onclick="removeNewImage(${index})">×</button>
+                `;
+                previewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
         });
     }
     
-    // Drag & drop на область загрузки
+    function removeNewImage(index) {
+        selectedFiles.splice(index, 1);
+        
+        // Update file input
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        imageInput.files = dt.files;
+        
+        updatePreview();
+    }
+    
+    // Render current images (edit mode)
+    const currentImagesEl = document.getElementById('currentImages');
+    if (currentImagesEl) {
+        try {
+            const images = JSON.parse(currentImagesEl.dataset.images || '[]');
+            if (images.length > 0) {
+                const container = currentImagesEl.parentElement.querySelector('.image-preview-grid');
+                container.innerHTML = images.map((img, i) => `
+                    <div class="image-preview-item">
+                        <img src="${img}" alt="">
+                        ${i === 0 ? '<span class="main-badge">ГЛАВНОЕ</span>' : ''}
+                        <label>
+                            <input type="checkbox" name="remove_images" value="${img}">
+                            <span style="color: #fff; font-size: 11px; margin-left: 6px;">Удалить</span>
+                        </label>
+                    </div>
+                `).join('');
+            }
+        } catch(e) {
+            console.error('Error parsing images:', e);
+        }
+    }
+    
+    // Drag and drop
     const fileUpload = document.getElementById('fileUpload');
-    if (fileUpload) {
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-            fileUpload.addEventListener(event, e => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-        });
-        
-        ['dragenter', 'dragover'].forEach(event => {
-            fileUpload.addEventListener(event, () => {
-                fileUpload.style.borderColor = '#fff';
-                fileUpload.style.background = '#1a1a1a';
-            });
-        });
-        
-        ['dragleave', 'drop'].forEach(event => {
-            fileUpload.addEventListener(event, () => {
-                fileUpload.style.borderColor = '#333';
-                fileUpload.style.background = 'transparent';
-            });
-        });
-        
-        fileUpload.addEventListener('drop', e => {
-            const files = e.dataTransfer.files;
-            imageInput.files = files;
-            imageInput.dispatchEvent(new Event('change'));
-        });
-    }
     
-    renderImages();
-});
+    fileUpload.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUpload.style.borderColor = '#666';
+        fileUpload.style.background = '#1a1a1a';
+    });
+    
+    fileUpload.addEventListener('dragleave', () => {
+        fileUpload.style.borderColor = '#333';
+        fileUpload.style.background = 'transparent';
+    });
+    
+    fileUpload.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUpload.style.borderColor = '#333';
+        fileUpload.style.background = 'transparent';
+        
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length > 0) {
+            selectedFiles = [...selectedFiles, ...files];
+            
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            imageInput.files = dt.files;
+            
+            updatePreview();
+        }
+    });
 </script>
 {% endblock %}
