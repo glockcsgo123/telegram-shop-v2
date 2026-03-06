@@ -256,6 +256,19 @@
             letter-spacing: 0.5px;
         }
 
+        .price-old {
+            text-decoration: line-through;
+            color: var(--gray);
+            font-weight: 400;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+
+        .price-sale {
+            color: #ff4444;
+            font-weight: 700;
+        }
+
         /* Product Detail Modal */
         .product-modal-overlay {
             position: fixed;
@@ -1461,7 +1474,7 @@
             <h2>7. Контакты</h2>
             <p>По всем вопросам, связанным с обработкой персональных данных, вы можете обратиться:</p>
             <ul>
-                <li>Email: shidlovsky.benjamin@yandex.ru</li>
+                <li>Email: <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0e7d66676a6261787d6577206c6b60646f6367604e776f606a6b76207c7b">[email&#160;protected]</a></li>
                 <li>Telegram: @manager2soul</li>
             </ul>
 
@@ -1472,7 +1485,7 @@
         </div>
     </div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // Telegram WebApp
         const tg = window.Telegram?.WebApp;
         if (tg) {
@@ -1566,6 +1579,17 @@
                 const images = product.images || (product.image ? [product.image] : []);
                 const mainImage = images[0];
                 
+                // Формируем цену с учётом скидки
+                let priceHtml = '';
+                if (product.sale_price) {
+                    priceHtml = `
+                        <span class="price-old">${product.price.toLocaleString()} ₽</span>
+                        <span class="price-sale">${product.sale_price.toLocaleString()} ₽</span>
+                    `;
+                } else {
+                    priceHtml = `${product.price.toLocaleString()} ₽`;
+                }
+                
                 return `
                     <div class="product-card" onclick="openProductModal(${product.id})">
                         <div class="product-image-container">
@@ -1577,7 +1601,7 @@
                         </div>
                         <div class="product-info">
                             <div class="product-name">${product.name}</div>
-                            <div class="product-price">${product.price.toLocaleString()} ₽</div>
+                            <div class="product-price">${priceHtml}</div>
                         </div>
                     </div>
                 `;
@@ -1601,7 +1625,17 @@
 
             // Fill details
             document.getElementById('detailName').textContent = currentProduct.name;
-            document.getElementById('detailPrice').textContent = currentProduct.price.toLocaleString() + ' ₽';
+            
+            // Цена с учётом скидки
+            if (currentProduct.sale_price) {
+                document.getElementById('detailPrice').innerHTML = `
+                    <span class="price-old" style="font-size: 16px;">${currentProduct.price.toLocaleString()} ₽</span>
+                    <span class="price-sale" style="font-size: 22px;">${currentProduct.sale_price.toLocaleString()} ₽</span>
+                `;
+            } else {
+                document.getElementById('detailPrice').textContent = currentProduct.price.toLocaleString() + ' ₽';
+            }
+            
             document.getElementById('detailDescription').textContent = currentProduct.description || 'Качественная одежда от бренда 2SOUL. Материал высокого качества, стильный дизайн.';
 
             // Gallery
@@ -1737,13 +1771,16 @@
             
             const existingItem = cart.find(item => item.id === currentProduct.id && item.size === selectedSize);
             
+            // Используем цену со скидкой если есть
+            const finalPrice = currentProduct.sale_price || currentProduct.price;
+            
             if (existingItem) {
                 existingItem.qty++;
             } else {
                 cart.push({
                     id: currentProduct.id,
                     name: currentProduct.name,
-                    price: currentProduct.price,
+                    price: finalPrice,
                     image: images[0] || null,
                     size: selectedSize,
                     qty: 1
@@ -2117,13 +2154,4 @@
             } finally {
                 isSubmitting = false;
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Подтвердить заказ';
-            }
-        }
-
-        // Init
-        loadData();
-        updateCartBadge(); // Обновляем badge при загрузке
-    </script>
-</body>
-</html>
+      
