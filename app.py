@@ -23,7 +23,7 @@ CORS(app)
 # ==================== TELEGRAM УВЕДОМЛЕНИЯ ====================
 # Получи токен у @BotFather, ID группы - добавь бота в группу и напиши /start
 TELEGRAM_BOT_TOKEN = '8067294975:AAGnY-YaaZpsLfgyqqQV0ZtNpM-DfGi8z6k'  # Вставь токен от @BotFather
-TELEGRAM_CHAT_ID = '-123456789'  # Вставь ID группы (начинается с минуса)
+TELEGRAM_CHAT_ID = '-1003540164132'  # Вставь ID группы (начинается с минуса)
 
 def send_telegram_notification(order_id, customer, items, total):
     """Отправляет уведомление о новом заказе в Telegram группу"""
