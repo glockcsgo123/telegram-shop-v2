@@ -2139,7 +2139,17 @@
                 console.error('Error:', e);
                 if (tg) tg.HapticFeedback?.notificationOccurred('error');
                 alert('Ошибка при отправке заказа. Попробуйте ещё раз.');
-            } finally {
+           } finally {
                 isSubmitting = false;
                 submitBtn.disabled = false;
+                submitBtn.textContent = 'Подтвердить заказ';
+            }
+        }
+
+        // Init
+        loadData();
+        updateCartBadge(); // Обновляем badge при загрузке
+    </script>
+</body>
+</html>
       
