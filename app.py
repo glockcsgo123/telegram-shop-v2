@@ -14,10 +14,52 @@ import sqlite3
 import os
 import uuid
 import json
+import requests
 
 app = Flask(__name__)
 app.secret_key = 'change-this-secret-key-2soul-shop'  # ПОМЕНЯЙ!
 CORS(app)
+
+# ==================== TELEGRAM УВЕДОМЛЕНИЯ ====================
+# Получи токен у @BotFather, ID группы - добавь бота в группу и напиши /start
+TELEGRAM_BOT_TOKEN = '8067294975:AAGnY-YaaZpsLfgyqqQV0ZtNpM-DfGi8z6k'  # Вставь токен от @BotFather
+TELEGRAM_CHAT_ID = '-123456789'  # Вставь ID группы (начинается с минуса)
+
+def send_telegram_notification(order_id, customer, items, total):
+    """Отправляет уведомление о новом заказе в Telegram группу"""
+    if TELEGRAM_BOT_TOKEN == '-1003540164132':
+        return  # Токен не настроен
+    
+    # Формируем список товаров
+    items_text = ""
+    for item in items:
+        items_text += f"  • {item.get('name', '?')} (размер {item.get('size', '?')}) x{item.get('qty', 1)} — {item.get('price', 0)} ₽\n"
+    
+    # Формируем сообщение
+    message = f"""🛒 <b>Новый заказ #{order_id}</b>
+
+👤 <b>Клиент:</b> {customer.get('name', 'Не указано')}
+📱 <b>Телефон:</b> {customer.get('phone', 'Не указано')}
+📩 <b>Telegram:</b> {customer.get('telegram', 'Не указано')}
+💬 <b>VK:</b> {customer.get('vk', 'Не указано')}
+
+📦 <b>Товары:</b>
+{items_text}
+💰 <b>Итого:</b> {total} ₽
+
+🏙 <b>Город:</b> {customer.get('city', 'Не указано')}
+📝 <b>Комментарий:</b> {customer.get('comment', '—')}
+"""
+    
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        requests.post(url, data={
+            'chat_id': TELEGRAM_CHAT_ID,
+            'text': message,
+            'parse_mode': 'HTML'
+        }, timeout=5)
+    except:
+        pass  # Не блокируем заказ если уведомление не отправилось
 
 # Путь к данным — /data для Amvera (persistentMount)
 DATA_DIR = '/data' if os.path.exists('/data') else '.'
@@ -127,6 +169,11 @@ def init_db():
     except:
         pass
     
+    try:
+        cursor.execute('ALTER TABLE products ADD COLUMN sale_price INTEGER')
+    except:
+        pass
+    
     # Админ по умолчанию
     try:
         cursor.execute(
@@ -220,6 +267,7 @@ def api_products():
             'category': row['category_slug'] or 'other',
             'category_name': row['category_name'] or 'Другое',
             'price': row['price'],
+            'sale_price': row['sale_price'] if 'sale_price' in row.keys() else None,
             'description': row['description'] or '',
             'image': main_image,
             'images': images,
@@ -274,6 +322,9 @@ def api_create_order():
     order_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    
+    # Отправляем уведомление в Telegram
+    send_telegram_notification(order_id, customer, data.get('items', []), data.get('total', 0))
     
     return jsonify({'success': True, 'order_id': order_id})
 
@@ -405,6 +456,7 @@ def admin_add_product():
         name = request.form.get('name')
         category_id = request.form.get('category_id')
         price = request.form.get('price')
+        sale_price = request.form.get('sale_price') or None
         description = request.form.get('description', '')
         sizes = request.form.getlist('sizes')
         tag = request.form.get('tag') or None
@@ -418,9 +470,9 @@ def admin_add_product():
                 images.append(path)
         
         cursor.execute('''
-            INSERT INTO products (name, category_id, price, description, images, sizes, tag)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (name, category_id, price, description, json.dumps(images), json.dumps(sizes), tag))
+            INSERT INTO products (name, category_id, price, sale_price, description, images, sizes, tag)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (name, category_id, price, sale_price, description, json.dumps(images), json.dumps(sizes), tag))
         
         conn.commit()
         conn.close()
@@ -451,6 +503,7 @@ def admin_edit_product(product_id):
         name = request.form.get('name')
         category_id = request.form.get('category_id')
         price = request.form.get('price')
+        sale_price = request.form.get('sale_price') or None
         description = request.form.get('description', '')
         sizes = request.form.getlist('sizes')
         tag = request.form.get('tag') or None
@@ -475,9 +528,9 @@ def admin_edit_product(product_id):
         
         cursor.execute('''
             UPDATE products 
-            SET name=?, category_id=?, price=?, description=?, images=?, sizes=?, tag=?, active=?
+            SET name=?, category_id=?, price=?, sale_price=?, description=?, images=?, sizes=?, tag=?, active=?
             WHERE id=?
-        ''', (name, category_id, price, description, json.dumps(current_images), json.dumps(sizes), tag, active, product_id))
+        ''', (name, category_id, price, sale_price, description, json.dumps(current_images), json.dumps(sizes), tag, active, product_id))
         
         conn.commit()
         conn.close()
