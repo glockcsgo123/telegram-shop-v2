@@ -23,7 +23,7 @@ CORS(app)
 # ==================== TELEGRAM УВЕДОМЛЕНИЯ ====================
 # Получи токен у @BotFather, ID группы - добавь бота в группу и напиши /start
 TELEGRAM_BOT_TOKEN = '8067294975:AAGnY-YaaZpsLfgyqqQV0ZtNpM-DfGi8z6k'  # Вставь токен от @BotFather
-TELEGRAM_CHAT_ID = '-123456789'  # Вставь ID группы (начинается с минуса)
+TELEGRAM_CHAT_ID = '-1003540164132'  # Вставь ID группы (начинается с минуса)
 
 def send_telegram_notification(order_id, customer, items, total):
     """Отправляет уведомление о новом заказе в Telegram группу"""
@@ -174,6 +174,11 @@ def init_db():
     except:
         pass
     
+    try:
+        cursor.execute('ALTER TABLE products ADD COLUMN sort_order INTEGER DEFAULT 0')
+    except:
+        pass
+    
     # Админ по умолчанию
     try:
         cursor.execute(
@@ -247,7 +252,7 @@ def api_products():
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE p.active = 1
-        ORDER BY p.created_at DESC
+        ORDER BY p.sort_order ASC, p.created_at DESC
     ''')
     
     products = []
@@ -432,7 +437,7 @@ def admin_products():
         SELECT p.*, c.name as category_name
         FROM products p
         LEFT JOIN categories c ON p.category_id = c.id
-        ORDER BY p.created_at DESC
+        ORDER BY p.sort_order ASC, p.created_at DESC
     ''')
     products = cursor.fetchall()
     
@@ -566,6 +571,51 @@ def admin_delete_product(product_id):
     conn.commit()
     conn.close()
     
+    return redirect(url_for('admin_products'))
+
+
+@app.route('/admin/products/move/<int:product_id>/<direction>')
+@login_required
+def admin_move_product(product_id, direction):
+    """Перемещает товар вверх или вниз в списке"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Получаем текущий товар
+    cursor.execute('SELECT id, sort_order FROM products WHERE id = ?', (product_id,))
+    product = cursor.fetchone()
+    
+    if not product:
+        conn.close()
+        return redirect(url_for('admin_products'))
+    
+    current_order = product['sort_order'] or 0
+    
+    if direction == 'up':
+        # Ищем товар выше (с меньшим sort_order)
+        cursor.execute('''
+            SELECT id, sort_order FROM products 
+            WHERE sort_order < ? OR (sort_order = ? AND id < ?)
+            ORDER BY sort_order DESC, id DESC LIMIT 1
+        ''', (current_order, current_order, product_id))
+    else:
+        # Ищем товар ниже (с большим sort_order)
+        cursor.execute('''
+            SELECT id, sort_order FROM products 
+            WHERE sort_order > ? OR (sort_order = ? AND id > ?)
+            ORDER BY sort_order ASC, id ASC LIMIT 1
+        ''', (current_order, current_order, product_id))
+    
+    swap_product = cursor.fetchone()
+    
+    if swap_product:
+        swap_order = swap_product['sort_order'] or 0
+        # Меняем местами
+        cursor.execute('UPDATE products SET sort_order = ? WHERE id = ?', (swap_order, product_id))
+        cursor.execute('UPDATE products SET sort_order = ? WHERE id = ?', (current_order, swap_product['id']))
+        conn.commit()
+    
+    conn.close()
     return redirect(url_for('admin_products'))
 
 

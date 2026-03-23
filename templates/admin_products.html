@@ -3,6 +3,33 @@
 {% block title %}Товары — Админ-панель{% endblock %}
 
 {% block content %}
+<style>
+.sort-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sort-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 20px;
+    background: #222;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #888;
+    text-decoration: none;
+    font-size: 10px;
+    transition: all 0.2s;
+}
+.sort-btn:hover {
+    background: #333;
+    color: #fff;
+    border-color: #666;
+}
+</style>
+
 <div class="page-header">
     <h1 class="page-title">Товары</h1>
     <a href="{{ url_for('admin_add_product') }}" class="btn">
@@ -20,6 +47,7 @@
         <table>
             <thead>
                 <tr>
+                    <th style="width: 60px;">Порядок</th>
                     <th>Товар</th>
                     <th>Категория</th>
                     <th>Цена</th>
@@ -31,6 +59,12 @@
             <tbody>
                 {% for product in products %}
                 <tr>
+                    <td>
+                        <div class="sort-buttons">
+                            <a href="{{ url_for('admin_move_product', product_id=product.id, direction='up') }}" class="sort-btn" title="Вверх">▲</a>
+                            <a href="{{ url_for('admin_move_product', product_id=product.id, direction='down') }}" class="sort-btn" title="Вниз">▼</a>
+                        </div>
+                    </td>
                     <td>
                         <div class="product-cell">
                             {% if product.image %}
