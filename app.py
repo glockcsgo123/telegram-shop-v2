@@ -179,6 +179,12 @@ def init_db():
     except:
         pass
     
+    # Инициализируем sort_order для товаров где он NULL или 0
+    cursor.execute('''
+        UPDATE products SET sort_order = id * 10 
+        WHERE sort_order IS NULL OR sort_order = 0
+    ''')
+    
     # Админ по умолчанию
     try:
         cursor.execute(
@@ -581,39 +587,36 @@ def admin_move_product(product_id, direction):
     conn = get_db()
     cursor = conn.cursor()
     
-    # Получаем текущий товар
-    cursor.execute('SELECT id, sort_order FROM products WHERE id = ?', (product_id,))
-    product = cursor.fetchone()
+    # Получаем все товары в текущем порядке
+    cursor.execute('SELECT id, sort_order FROM products ORDER BY sort_order ASC, id ASC')
+    all_products = cursor.fetchall()
     
-    if not product:
+    # Находим индекс текущего товара
+    product_ids = [p['id'] for p in all_products]
+    
+    if product_id not in product_ids:
         conn.close()
         return redirect(url_for('admin_products'))
     
-    current_order = product['sort_order'] or 0
+    current_index = product_ids.index(product_id)
     
-    if direction == 'up':
-        # Ищем товар выше (с меньшим sort_order)
-        cursor.execute('''
-            SELECT id, sort_order FROM products 
-            WHERE sort_order < ? OR (sort_order = ? AND id < ?)
-            ORDER BY sort_order DESC, id DESC LIMIT 1
-        ''', (current_order, current_order, product_id))
+    # Определяем новый индекс
+    if direction == 'up' and current_index > 0:
+        new_index = current_index - 1
+    elif direction == 'down' and current_index < len(product_ids) - 1:
+        new_index = current_index + 1
     else:
-        # Ищем товар ниже (с большим sort_order)
-        cursor.execute('''
-            SELECT id, sort_order FROM products 
-            WHERE sort_order > ? OR (sort_order = ? AND id > ?)
-            ORDER BY sort_order ASC, id ASC LIMIT 1
-        ''', (current_order, current_order, product_id))
+        conn.close()
+        return redirect(url_for('admin_products'))
     
-    swap_product = cursor.fetchone()
+    # Меняем местами sort_order
+    swap_id = product_ids[new_index]
+    current_order = all_products[current_index]['sort_order'] or current_index * 10
+    swap_order = all_products[new_index]['sort_order'] or new_index * 10
     
-    if swap_product:
-        swap_order = swap_product['sort_order'] or 0
-        # Меняем местами
-        cursor.execute('UPDATE products SET sort_order = ? WHERE id = ?', (swap_order, product_id))
-        cursor.execute('UPDATE products SET sort_order = ? WHERE id = ?', (current_order, swap_product['id']))
-        conn.commit()
+    cursor.execute('UPDATE products SET sort_order = ? WHERE id = ?', (swap_order, product_id))
+    cursor.execute('UPDATE products SET sort_order = ? WHERE id = ?', (current_order, swap_id))
+    conn.commit()
     
     conn.close()
     return redirect(url_for('admin_products'))
